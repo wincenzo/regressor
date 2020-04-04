@@ -1,3 +1,6 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 class Regressor:
     
@@ -86,10 +89,10 @@ class Regressor:
             for i in range(W_list.shape[2]):
                 plt.plot(W_list[...,i], label=f'W_{i}')
             plt.legend(ncol=3, frameon=True, loc='upper right')
-            plt.title('WEIGHTS\' EVOLUTION', fontsize=15)
+            plt.title(f'WEIGHTS\' EVOLUTION with lambda = {self.reg_rate}', fontsize=15)
             plt.xlabel('epochs', fontsize=13)
             plt.ylabel('parameters\' values', fontsize=13)
-            #plt.savefig('C:\\Users\\wince\\Desktop\\param.png')
+            plt.savefig('C:\\Users\\wince\\Desktop\\param.png')
             plt.show()
 
         return self
@@ -165,17 +168,16 @@ class Regressor:
         
 
         
-    def cross_val(self, dataset, folds = 10, threshold = 0.5):
+    def cross_val(self, istance, dataset, folds = 10, threshold = 0.5):
         
-        #dataset.sample(frac=1).reset_index(drop=True)
         reg_CV = Regressor(
-            target=log_reg.target,
-            l_rate=log_reg.l_rate,
-            stop=log_reg.stop,
-            reg_rate=log_reg.reg_rate,
-            beta=log_reg.beta,
-            epochs=log_reg.epochs,
-            logistic=log_reg.logistic)
+            target=istance.target,
+            l_rate=istance.l_rate,
+            stop=istance.stop,
+            reg_rate=istance.reg_rate,
+            beta=istance.beta,
+            epochs=istance.epochs,
+            logistic=istance.logistic)
         
         assert folds > 1, 'folds must be greater than 1'
         
