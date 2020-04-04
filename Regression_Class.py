@@ -179,7 +179,7 @@ class Regressor:
             epochs=self.epochs,
             logistic=self.logistic)
         
-        assert folds > 1, 'folds must be greater than 1'
+        assert 1 < folds <= len(dataset), 'folds must be greater than 1 and less than or equal to dataset length'
         
         slices = np.arange(0, len(dataset)+1, len(dataset)//folds)
         df_train = (dataset.drop(index=range(slices[i], slices[i+1])) for i in range(folds))
