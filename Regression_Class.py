@@ -89,7 +89,7 @@ class Regressor:
             for i in range(W_list.shape[2]):
                 plt.plot(W_list[...,i], label=f'W_{i}')
             plt.legend(ncol=3, frameon=True, loc='upper right')
-            plt.title(f'WEIGHTS\' EVOLUTION with lambda = {self.reg_rate}', fontsize=15)
+            plt.title(f'Weights\' evolution;  $\gamma$ = {self.reg_rate}', fontsize=15)
             plt.xlabel('epochs', fontsize=13)
             plt.ylabel('parameters\' values', fontsize=13)
             #plt.savefig('C:\\Users\\wince\\Desktop\\param.png')
