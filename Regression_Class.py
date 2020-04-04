@@ -11,7 +11,7 @@ class Regressor:
                  reg_rate = 0.,
                  beta = .5,
                  epochs = 1000,
-                 logistic=True):
+                 logistic = True):
         
         self.target = target
         self.l_rate = l_rate
@@ -47,12 +47,12 @@ class Regressor:
     
    
     
-    def fit(self, X, y, graph = False):
+    def fit(self, X, y, graph = False, reset = False):
         
         n = len(X)
         
         np.random.seed(3479)
-        weights = np.random.rand(1, X.shape[1]) if self.start is None else self.start
+        weights = np.random.rand(1, X.shape[1]) if self.start is None or reset else self.start
     
         Gamma = np.full((1, X.shape[1]), self.reg_rate/n)
         Gamma[0, 0] = 0
@@ -65,7 +65,7 @@ class Regressor:
             dJ = (1/n) * ((H-y).T @ X)
             update = weights - (self.l_rate * dJ)
 
-            soft_thresholding = lambda W, K: np.sign(W) * np.maximum(abs(W)-K, 0)
+            soft_thresholding = lambda W, K: np.sign(W) * np.maximum(np.abs(W)-K, 0)
             shrinkage = 1 / (1 + self.l_rate*(1-self.beta)*Gamma)
             _weights = shrinkage * soft_thresholding(update, self.l_rate*self.beta*Gamma)
             
@@ -78,11 +78,11 @@ class Regressor:
                 break
         else:
             print('max epochs reached')
-    
-        W_list = np.array(W_list) 
-    
+            
         self.weights = weights
         self.start = weights
+    
+        W_list = np.array(W_list)
   
         if graph:
             plt.figure(figsize=(15, 10))
@@ -92,7 +92,7 @@ class Regressor:
             plt.title(f'WEIGHTS\' EVOLUTION with lambda = {self.reg_rate}', fontsize=15)
             plt.xlabel('epochs', fontsize=13)
             plt.ylabel('parameters\' values', fontsize=13)
-            plt.savefig('C:\\Users\\wince\\Desktop\\param.png')
+            #plt.savefig('C:\\Users\\wince\\Desktop\\param.png')
             plt.show()
 
         return self
@@ -168,16 +168,16 @@ class Regressor:
         
 
         
-    def cross_val(self, istance, dataset, folds = 10, threshold = 0.5):
+    def cross_val(self, dataset, folds = 10, threshold = 0.5):
         
         reg_CV = Regressor(
-            target=istance.target,
-            l_rate=istance.l_rate,
-            stop=istance.stop,
-            reg_rate=istance.reg_rate,
-            beta=istance.beta,
-            epochs=istance.epochs,
-            logistic=istance.logistic)
+            target=self.target,
+            l_rate=self.l_rate,
+            stop=self.stop,
+            reg_rate=self.reg_rate,
+            beta=self.beta,
+            epochs=self.epochs,
+            logistic=self.logistic)
         
         assert folds > 1, 'folds must be greater than 1'
         
