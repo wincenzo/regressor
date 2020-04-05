@@ -20,7 +20,7 @@ class Regressor:
         self.beta = beta
         self.epochs = epochs
         self.logistic = logistic
-        self.start = None
+        self.weights = None
         
     
                    
@@ -52,7 +52,7 @@ class Regressor:
         n = len(X)
         
         np.random.seed(3479)
-        weights = np.random.rand(1, X.shape[1]) if self.start is None or reset else self.start
+        weights = np.random.rand(1, X.shape[1]) if self.weights is None or reset else self.weights
     
         Gamma = np.full((1, X.shape[1]), self.reg_rate/n)
         Gamma[0, 0] = 0
@@ -80,7 +80,6 @@ class Regressor:
             print('max epochs reached')
             
         self.weights = weights
-        self.start = weights
     
         W_list = np.array(W_list)
   
@@ -188,8 +187,8 @@ class Regressor:
         train = map(reg_CV.matrix, df_train)
         test = map(reg_CV.matrix, df_test)
 
-        results = sum([reg_CV.fit(a, b).predict(c)._metrics(d, threshold) for (a, b), (c, d) in zip(train, test)])
-        (TP, FP), (TN, FN) = results
+        conf_mat = np.sum([reg_CV.fit(a, b).predict(c)._metrics(d, threshold) for (a, b), (c, d) in zip(train, test)], axis=0)
+        (TP, FP), (TN, FN) = conf_mat
     
         epsilon = 1e-7
         a = (TP+TN) / (TP+TN+FP+FN)
@@ -197,6 +196,4 @@ class Regressor:
         r = TP / (TP+FN+epsilon)
         F1 = (2*p*r) / (p+r)
     
-        confusion_matrix = np.array([[TP, FP], [TN, FN]])
-    
-        print(f'Accuracy: {a}\nPrecision: {p}\nRecall: {r}\nF1 score: {F1}\n\nConfusion Matrix:\n {confusion_matrix}')
+        print(f'Accuracy: {a}\nPrecision: {p}\nRecall: {r}\nF1 score: {F1}\n\nConfusion Matrix:\n {conf_mat}')
