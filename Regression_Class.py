@@ -187,8 +187,8 @@ class Regressor:
         train = map(reg_CV.matrix, df_train)
         test = map(reg_CV.matrix, df_test)
 
-        conf_mat = np.sum([reg_CV.fit(a, b).predict(c)._metrics(d, threshold) for (a, b), (c, d) in zip(train, test)], axis=0)
-        (TP, FP), (TN, FN) = conf_mat
+        conf_matr = np.sum([reg_CV.fit(a, b).predict(c)._metrics(d, threshold) for (a, b), (c, d) in zip(train, test)], axis=0)
+        (TP, FP), (TN, FN) = conf_matr
     
         epsilon = 1e-7
         a = (TP+TN) / (TP+TN+FP+FN)
@@ -196,4 +196,4 @@ class Regressor:
         r = TP / (TP+FN+epsilon)
         F1 = (2*p*r) / (p+r)
     
-        print(f'Accuracy: {a}\nPrecision: {p}\nRecall: {r}\nF1 score: {F1}\n\nConfusion Matrix:\n {conf_mat}')
+        print(f'Accuracy: {a}\nPrecision: {p}\nRecall: {r}\nF1 score: {F1}\n\nConfusion Matrix:\n {conf_matr}')
