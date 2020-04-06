@@ -131,7 +131,7 @@ class Regressor:
         self.recall = TP / (TP+FN+epsilon)
         self.F1 = (2*self.precision*self.recall) / (self.precision+self.recall+epsilon) 
 
-        self.confusion_matrix = np.array([[TP, FP], [TN, FN]])
+        self.confusion_matrix = np.array([[TP, FP], [FN, TN]])
             
         return self.confusion_matrix
     
@@ -149,7 +149,7 @@ class Regressor:
     def ROC(self, test):
         
         results = [self._metrics(test, i).reshape(4) for i in np.arange(0.0, 1.1, 0.01)]
-        TP, FP, TN, FN = zip(*results)
+        TP, FP, FN, TN = zip(*results)
     
         epsilon = 1e-7
         TPR = np.array(TP) / (np.array(TP) + np.array(FN) + epsilon)
@@ -189,7 +189,7 @@ class Regressor:
         test = map(reg_CV.matrix, df_test)
 
         conf_matr = np.sum([reg_CV.fit(a, b).predict(c)._metrics(d, threshold) for (a, b), (c, d) in zip(train, test)], axis=0)
-        (TP, FP), (TN, FN) = conf_matr
+        (TP, FP), (FN, TN) = conf_matr
     
         epsilon = 1e-7
         a = (TP+TN) / (TP+TN+FP+FN)
