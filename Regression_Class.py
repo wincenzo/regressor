@@ -52,38 +52,37 @@ class Regressor:
         n = len(X)
         
         np.random.seed(3479)
-        self.weights = np.random.rand(1, X.shape[1]) if self.weights is None or reset else self.weights
+        weights = np.random.rand(1, X.shape[1]) if self.weights is None or reset else self.weights
     
         Gamma = np.full((1, X.shape[1]), self.reg_rate/n)
         Gamma[0, 0] = 0
     
-        W_list = [self.weights]
+        W_list = [weights]
+
         for i in range(self.epochs):
-            H = X @ self.weights.T
+            
+            H = X @ weights.T
             H = 1 / (1 + np.exp(-H)) if self.logistic else H
  
             dJ = (1/n) * ((H-y).T @ X)
-            update = self.weights - (self.l_rate * dJ)
+            update = weights - (self.l_rate * dJ)
 
-            #soft_thresholding = lambda W, K: np.sign(W) * np.maximum(np.abs(W)-K, 0)
             soft_thresholding = np.sign(update) * np.maximum(np.abs(update)-(self.l_rate*self.beta*Gamma), 0)
             shrinkage = 1 / (1 + self.l_rate*(1-self.beta)*Gamma)
-            #weights = shrinkage * soft_thresholding(update, self.l_rate*self.beta*Gamma)
-            weights = shrinkage * soft_thresholding
+            _weights = shrinkage * soft_thresholding
         
-            delta = self.weights - weights
-            self.weights = weights
+            delta = weights - _weights
+            weights = _weights
             
-            W_list.append(self.weights)
+            W_list.append(weights)
         
             if (abs(delta) <= self.stop).all():
                 break
         else:
             print('max epochs reached')
             
-        #self.weights = weights
-    
         W_list = np.array(W_list)
+        self.weights = weights
   
         if graph:
             plt.figure(figsize=(15, 10))
@@ -149,7 +148,7 @@ class Regressor:
 
     def ROC(self, test):
         
-        results = (self._metrics(test, i).reshape(4) for i in np.arange(0.0, 1.1, 0.01))
+        results = [self._metrics(test, i).reshape(4) for i in np.arange(0.0, 1.1, 0.01)]
         TP, FP, TN, FN = zip(*results)
     
         epsilon = 1e-7
