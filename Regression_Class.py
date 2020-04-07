@@ -49,12 +49,14 @@ class Regressor:
     
     def fit(self, X, y, graph = False, reset = False):
         
+        l, r, b, s, log =  self.l_rate, self.reg_rate, self.beta, self.stop, self.logistic
+        
         n = len(X)
         
         np.random.seed(3479)
         weights = np.random.rand(1, X.shape[1]) if self.weights is None or reset else self.weights
     
-        Gamma = np.full((1, X.shape[1]), self.reg_rate/n)
+        Gamma = np.full((1, X.shape[1]), r/n)
         Gamma[0, 0] = 0
     
         W_list = [weights]
@@ -62,21 +64,21 @@ class Regressor:
         for i in range(self.epochs):
             
             H = X @ weights.T
-            H = 1 / (1 + np.exp(-H)) if self.logistic else H
+            H = 1 / (1 + np.exp(-H)) if log else H
  
             dJ = (1/n) * ((H-y).T @ X)
-            update = weights - (self.l_rate * dJ)
+            _weights = weights - (l*dJ)
 
-            soft_thresholding = np.sign(update) * np.maximum(np.abs(update)-(self.l_rate*self.beta*Gamma), 0)
-            shrinkage = 1 / (1 + self.l_rate*(1-self.beta)*Gamma)
-            _weights = shrinkage * soft_thresholding
+            _weights = np.sign(_weights) * np.maximum(np.abs(_weights)-(l*b*Gamma), 0)
+            shrinkage = 1 / (1 + l*(1-b)*Gamma)
+            _weights *= shrinkage 
         
             delta = weights - _weights
             weights = _weights
             
             W_list.append(weights)
         
-            if (abs(delta) <= self.stop).all():
+            if (abs(delta) <= s).all():
                 break
         else:
             print('max epochs reached')
@@ -89,7 +91,7 @@ class Regressor:
             for i in range(W_list.shape[2]):
                 plt.plot(W_list[...,i], label=f'W_{i}')
             plt.legend(ncol=3, frameon=True, loc='upper right')
-            plt.title(f'Weights\' evolution;  $\gamma$ = {self.reg_rate}', fontsize=15)
+            plt.title(f'Weights\' evolution;  $\gamma$ = {r}', fontsize=15)
             plt.xlabel('epochs', fontsize=13)
             plt.ylabel('parameters\' values', fontsize=13)
             #plt.savefig('C:\\Users\\wince\\Desktop\\param.png')
@@ -130,16 +132,14 @@ class Regressor:
         self.precision = TP / (TP+FP+epsilon)
         self.recall = TP / (TP+FN+epsilon)
         self.F1 = (2*self.precision*self.recall) / (self.precision+self.recall+epsilon) 
-
-        self.confusion_matrix = np.array([[TP, FP], [FN, TN]])
             
-        return self.confusion_matrix
+        return np.array([[TP, FP], [FN, TN]])
     
 
  
     def metrics(self, test, threshold = 0.5):
         
-        self._metrics(test, threshold)
+        self.confusion_matrix = self._metrics(test, threshold)
         
         print(f'Accuracy: {self.accuracy}\nPrecision: {self.precision}\nRecall: {self.recall}\nF1 score: {self.F1}', end='\n\n')
         print(f'Confusion Matrix:\n {self.confusion_matrix}')
@@ -148,7 +148,7 @@ class Regressor:
 
     def ROC(self, test):
         
-        results = [self._metrics(test, i).reshape(4) for i in np.arange(0.0, 1.1, 0.01)]
+        results = [self._metrics(test, i).ravel() for i in np.arange(0.0, 1.1, 0.01)]
         TP, FP, FN, TN = zip(*results)
     
         epsilon = 1e-7
