@@ -47,7 +47,7 @@ class Regressor:
     
    
     
-    def fit(self, X, y, graph = False, reset = False):
+    def fit(self, X, y, reset = False):
         
         l, r, b, s, log =  self.l_rate, self.reg_rate, self.beta, self.stop, self.logistic
         
@@ -61,7 +61,7 @@ class Regressor:
     
         W_list = [weights]
 
-        for i in range(self.epochs):
+        for e in range(self.epochs):
             
             H = X @ weights.T
             H = 1 / (1 + np.exp(-H)) if log else H
@@ -85,19 +85,25 @@ class Regressor:
             
         W_list = np.array(W_list)
         self.weights = weights
-  
-        if graph:
-            plt.figure(figsize=(15, 10))
-            for i in range(W_list.shape[2]):
-                plt.plot(W_list[...,i], label=f'W_{i}')
-            plt.legend(ncol=3, frameon=True, loc='upper right')
-            plt.title(f'Weights\' evolution;  $\gamma$ = {r}', fontsize=15)
-            plt.xlabel('epochs', fontsize=13)
-            plt.ylabel('parameters\' values', fontsize=13)
-            #plt.savefig('C:\\Users\\wince\\Desktop\\param.png')
-            plt.show()
+        self.W_list = W_list
 
         return self
+    
+    
+    def graph(self, save = False):
+        
+        w = self.W_list
+        
+        plt.figure(figsize=(15, 10))
+        for i in range(w.shape[2]):
+            plt.plot(w[...,i], label=f'W_{i}')
+        plt.legend(ncol=3, frameon=True, loc='upper right')
+        plt.title(f'Weights\' evolution;  $\gamma$ = {self.reg_rate}', fontsize=15)
+        plt.xlabel('epochs', fontsize=13)
+        plt.ylabel('parameters\' values', fontsize=13)
+        if save:
+            plt.savefig('C:\\Users\\wince\\Desktop\\param.png')
+        plt.show()
     
  
     
@@ -111,7 +117,7 @@ class Regressor:
     
     def fit_predict(self, X_train, y_train, X_test):
         
-        weights = self.fit(X_train, y_train, graph=False)
+        weights = self.fit(X_train, y_train)
         prediction = 1 / (1 + np.exp(-(X_test @ self.weights.T)))
         
         return  weights, output
@@ -122,10 +128,10 @@ class Regressor:
             
         classification = np.array((self.prediction >= threshold), dtype=np.int)
     
-        TP = len(classification[(classification == 1) & (classification == test)])
-        FP = len(classification[(classification == 1) & (classification != test)])
-        TN = len(classification[(classification == 0) & (classification == test)])
-        FN = len(classification[(classification == 0) & (classification != test)])
+        TP = classification[(classification == 1) & (classification == test)].size
+        FP = classification[(classification == 1) & (classification != test)].size
+        TN = classification[(classification == 0) & (classification == test)].size
+        FN = classification[(classification == 0) & (classification != test)].size
 
         epsilon = 1e-7
         self.accuracy = (TP+TN) / (TP+TN+FP+FN)
@@ -181,14 +187,15 @@ class Regressor:
         
         assert 1 < folds <= len(dataset), 'folds must be greater than 1 and less than or equal to dataset length'
         
-        slices = np.arange(0, len(dataset)+1, len(dataset)//folds)
+        slices = range(0, len(dataset)+1, len(dataset)//folds)
         df_train = (dataset.drop(index=range(slices[i], slices[i+1])) for i in range(folds))
         df_test = (dataset.iloc[slices[i]:slices[i+1]] for i in range(folds))
         
         train = map(reg_CV.matrix, df_train)
         test = map(reg_CV.matrix, df_test)
 
-        conf_matr = np.sum([reg_CV.fit(a, b).predict(c)._metrics(d, threshold) for (a, b), (c, d) in zip(train, test)], axis=0)
+        conf_matr = np.sum([reg_CV.fit(a, b).predict(c)._metrics(d, threshold) for (a, b), (c, d) in zip(train, test)], 
+                           axis=0)
         (TP, FP), (FN, TN) = conf_matr
     
         epsilon = 1e-7
