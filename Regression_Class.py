@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+
+
 
 class Regressor:
     
@@ -20,7 +23,7 @@ class Regressor:
         self.beta = beta
         self.epochs = epochs
         self.logistic = logistic
-        self.weights = None
+        self._weights_ = None
         
     
                    
@@ -28,20 +31,25 @@ class Regressor:
         
         X = dataset.drop(self.target, axis=1).to_numpy()
         X = np.insert(X, 0, 1, axis=1)
-        y = dataset[[self.target]].to_numpy()
+        y = dataset[[self.target]].to_numpy() #double square brakets return a column vector 
 
         return X, y   
     
 
  
-    def split(self, dataset, cutoff = .8):
+    def split(self, dataset, cutoff = .8, seed=None):
         
         n = len(dataset)
+        cut = int(n*cutoff)
         
-        df_train, df_test = dataset.iloc[0:int(n*cutoff)], dataset.iloc[int(n*cutoff):]
+        dataset = dataset.sample(frac=1, random_state=seed)
+        
+        df_train, df_test = dataset.iloc[0:cut], dataset.iloc[cut:]
         
         X_train, y_train = self.matrix(df_train)
         X_test, y_test = self.matrix(df_test)
+        
+        self.df = dataset
           
         return  X_train, y_train, X_test, y_test
     
@@ -49,67 +57,104 @@ class Regressor:
     
     def fit(self, X, y, reset = False):
         
-        l, r, b, s, log =  self.l_rate, self.reg_rate, self.beta, self.stop, self.logistic
+        self.n = len(X)
+        self.X, self.y = X, y
         
-        n = len(X)
+        n = self.n
+        l = self.l_rate
+        r = self.reg_rate
+        b = self.beta
+        s = self.stop
+        log = self.logistic
         
-        np.random.seed(3479)
-        weights = np.random.rand(1, X.shape[1]) if self.weights is None or reset else self.weights
+        weights = np.ones((1, X.shape[1])) if self._weights_ is None or reset else self._weights_
     
-        Gamma = np.full((1, X.shape[1]), r/n)
-        Gamma[0, 0] = 0
+        gamma = np.full((1, X.shape[1]), r/n)
+        gamma[0, 0] = 0
+        self.gamma = gamma
     
-        W_list = [weights]
-
+        w_list = [weights]
+        
         for e in range(self.epochs):
             
             H = X @ weights.T
             H = 1 / (1 + np.exp(-H)) if log else H
- 
+            
             dJ = (1/n) * ((H-y).T @ X)
             _weights = weights - (l*dJ)
 
-            _weights = np.sign(_weights) * np.maximum(np.abs(_weights)-(l*b*Gamma), 0)
-            shrinkage = 1 / (1 + l*(1-b)*Gamma)
+            _weights = np.sign(_weights) * np.maximum(np.abs(_weights)-(l*b*gamma), 0)
+            shrinkage = 1 / (1 + l*(1-b)*gamma)
             _weights *= shrinkage 
         
             delta = weights - _weights
             weights = _weights
             
-            W_list.append(weights)
+            w_list.append(weights)
         
             if (abs(delta) <= s).all():
                 break
         else:
             print('max epochs reached')
             
-        W_list = np.array(W_list)
-        self.weights = weights
-        self.W_list = W_list
+        w_list = np.array(w_list)
+        
+        self.w_list = w_list
+        self._weights_ = weights
 
         return self
     
     
-    def graph(self, save = False):
+    
+    @property
+    def weights(self):
         
-        w = self.W_list
+        features = np.insert(self.df.columns.array[:-1], 0, 'bias')
+        weights = pd.DataFrame({'features': features, 'weights': self._weights_.ravel()})
         
-        plt.figure(figsize=(15, 10))
+        return weights
+        
+    
+    
+    def graph(self, size = (11,10)):
+       
+        w_T = np.transpose(self.w_list, axes=[0,2,1])
+            
+        H = self.X @ w_T
+        H = 1 / (1 + np.exp(-H)) if self.logistic else H
+            
+        J = (-1/self.n) * (self.y.T @ np.log(H) + (1-self.y).T @ np.log(1-H))
+        l2 = ((1-self.beta)/2) * (self.w_list @ w_T)
+        l1 = self.beta * np.linalg.norm(self.w_list, ord=1, axis=(1,2))[:,np.newaxis,np.newaxis]
+        J = (J+(self.reg_rate/self.n)*(l1+l2)).ravel()
+        
+        plt.figure(figsize=size, tight_layout=True)
+            
+        plt.subplot2grid((5, 1), (0, 0), rowspan=2)
+        plt.plot(J, 'b')
+        plt.title('Error\'s path', fontsize=15)
+        plt.xlabel('epochs', fontsize=13)
+        plt.ylabel('error', fontsize=13)
+
+            
+        w = self.w_list
+        
+        plt.subplot2grid((5, 1), (2, 0), rowspan=3)
         for i in range(w.shape[2]):
             plt.plot(w[...,i], label=f'W_{i}')
-        plt.legend(ncol=3, frameon=True, loc='upper right')
-        plt.title(f'Weights\' evolution;  $\gamma$ = {self.reg_rate}', fontsize=15)
+            
+        plt.legend(frameon=True, bbox_to_anchor=(1.1, 1.0))
+        plt.title(f'Weights\' path - $\gamma$ = {self.reg_rate}', fontsize=15)
         plt.xlabel('epochs', fontsize=13)
-        plt.ylabel('parameters\' values', fontsize=13)
-        if save:
-            plt.savefig('C:\\Users\\wince\\Desktop\\param.png')
+        plt.ylabel('weights', fontsize=13)
+        
         plt.show()
-    
+        
  
     
     def predict(self, test):
     
-        self.prediction =  1 / (1 + np.exp(-(test @ self.weights.T)))
+        self.prediction =  1 / (1 + np.exp(-(test @ self._weights_.T)))
         
         return self
     
@@ -118,7 +163,7 @@ class Regressor:
     def fit_predict(self, X_train, y_train, X_test):
         
         weights = self.fit(X_train, y_train)
-        prediction = 1 / (1 + np.exp(-(X_test @ self.weights.T)))
+        prediction = 1 / (1 + np.exp(-(X_test @ self._weights_.T)))
         
         return  weights, output
     
@@ -148,13 +193,25 @@ class Regressor:
         self.confusion_matrix = self._metrics(test, threshold)
         
         print(f'Accuracy: {self.accuracy}\nPrecision: {self.precision}\nRecall: {self.recall}\nF1 score: {self.F1}', end='\n\n')
-        print(f'Confusion Matrix:\n {self.confusion_matrix}')
+        
+        plt.figure(figsize=(3,3))
+        sns.heatmap(self.confusion_matrix, 
+                    annot=True, 
+                    fmt='d',  
+                    center=0, 
+                    annot_kws={'fontsize':14},
+                    square=True, 
+                    xticklabels=['P','N'],
+                    yticklabels=['P','N'])
+        
+        plt.title('Confusion Matrix', fontsize=14)
+        plt.show()
             
 
 
     def ROC(self, test):
         
-        results = [self._metrics(test, i).ravel() for i in np.arange(0.0, 1.1, 0.01)]
+        results = (self._metrics(test, i).ravel() for i in np.arange(0.0, 1.1, 0.01))
         TP, FP, FN, TN = zip(*results)
     
         epsilon = 1e-7
@@ -163,7 +220,7 @@ class Regressor:
     
         AUC = np.around(np.trapz(TPR, FPR), 2)
     
-        plt.figure(figsize=(8, 8))
+        plt.figure(figsize=(6, 6))
         plt.plot(FPR, TPR, color='b')
         plt.plot([0,1], [0,1], 'r--')
         plt.text(0.7, 0.2, f'AUC = {abs(AUC)}', fontsize=16, color='k')
@@ -196,6 +253,7 @@ class Regressor:
 
         conf_matr = np.sum([reg_CV.fit(a, b).predict(c)._metrics(d, threshold) for (a, b), (c, d) in zip(train, test)], 
                            axis=0)
+        
         (TP, FP), (FN, TN) = conf_matr
     
         epsilon = 1e-7
@@ -204,4 +262,18 @@ class Regressor:
         r = TP / (TP+FN+epsilon)
         F1 = (2*p*r) / (p+r)
     
-        print(f'Accuracy: {a}\nPrecision: {p}\nRecall: {r}\nF1 score: {F1}\n\nConfusion Matrix:\n {conf_matr}')
+        print(f'Accuracy: {a}\nPrecision: {p}\nRecall: {r}\nF1 score: {F1}', end='\n\n')
+        
+        plt.figure(figsize=(3,3))
+        sns.heatmap(conf_matr, 
+                    annot=True, 
+                    fmt='d',  
+                    center=0,
+                    annot_kws={'fontsize':14}, 
+                    square=True,
+                    xticklabels=['P','N'],
+                    yticklabels=['P','N'])
+        
+        plt.title('Confusion Matrix', fontsize=14)
+        plt.show()
+              
