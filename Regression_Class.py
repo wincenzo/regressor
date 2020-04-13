@@ -25,6 +25,7 @@ class Regressor:
         self.logistic = logistic
         self._weights_ = None
         
+        
     
                    
     def matrix(self, dataset):
@@ -34,6 +35,7 @@ class Regressor:
         y = dataset[[self.target]].to_numpy() #double square brakets return a column vector 
 
         return X, y   
+    
     
 
  
@@ -49,16 +51,17 @@ class Regressor:
         X_train, y_train = self.matrix(df_train)
         X_test, y_test = self.matrix(df_test)
         
-        self.df = dataset
+        self.features = list(dataset.columns)
           
         return  X_train, y_train, X_test, y_test
     
+    
    
     
-    def fit(self, X, y, reset = False):
+    def fit(self, X_train, y_train, reset = False):
         
-        self.n = len(X)
-        self.X, self.y = X, y
+        self.n = len(X_train)
+        self.X, self.y = X_train, y_train
         
         n = self.n
         l = self.l_rate
@@ -67,9 +70,9 @@ class Regressor:
         s = self.stop
         log = self.logistic
         
-        weights = np.ones((1, X.shape[1])) if self._weights_ is None or reset else self._weights_
+        weights = np.ones((1, X_train.shape[1])) if self._weights_ is None or reset else self._weights_
     
-        gamma = np.full((1, X.shape[1]), r/n)
+        gamma = np.full((1, X_train.shape[1]), r/n)
         gamma[0, 0] = 0
         self.gamma = gamma
     
@@ -77,10 +80,10 @@ class Regressor:
         
         for e in range(self.epochs):
             
-            H = X @ weights.T
+            H = X_train @ weights.T
             H = 1 / (1 + np.exp(-H)) if log else H
             
-            dJ = (1/n) * ((H-y).T @ X)
+            dJ = (1/n) * ((H-y_train).T @ X_train)
             _weights = weights - (l*dJ)
 
             _weights = np.sign(_weights) * np.maximum(np.abs(_weights)-(l*b*gamma), 0)
@@ -106,13 +109,16 @@ class Regressor:
     
     
     
+    
     @property
     def weights(self):
         
-        features = np.insert(self.df.columns.array[:-1], 0, 'bias')
-        weights = pd.DataFrame({'features': features, 'weights': self._weights_.ravel()})
+        self.features.remove(self.target)
+        self.features.insert(0, 'bias')
+        weights = pd.DataFrame({'features': self.features, 'weights': self._weights_.ravel()})
         
         return weights
+    
         
     
     
@@ -131,8 +137,7 @@ class Regressor:
         plt.figure(figsize=size, tight_layout=True)
             
         plt.subplot2grid((5, 1), (0, 0), rowspan=2)
-        plt.plot(J, 'b')
-        plt.title('Error\'s path', fontsize=15)
+        plt.plot(J, 'r')
         plt.xlabel('epochs', fontsize=13)
         plt.ylabel('error', fontsize=13)
 
@@ -143,20 +148,22 @@ class Regressor:
         for i in range(w.shape[2]):
             plt.plot(w[...,i], label=f'W_{i}')
             
-        plt.legend(frameon=True, bbox_to_anchor=(1.1, 1.0))
-        plt.title(f'Weights\' path - $\gamma$ = {self.reg_rate}', fontsize=15)
+        plt.legend(frameon=True, bbox_to_anchor=(1.1, 1.0), framealpha=.6)
+        plt.title(f'$\gamma$ = {self.reg_rate}', fontsize=14)
         plt.xlabel('epochs', fontsize=13)
         plt.ylabel('weights', fontsize=13)
         
         plt.show()
         
+        
  
     
-    def predict(self, test):
+    def predict(self, X_test):
     
-        self.prediction =  1 / (1 + np.exp(-(test @ self._weights_.T)))
+        self.prediction =  1 / (1 + np.exp(-(X_test @ self._weights_.T)))
         
         return self
+    
     
 
     
@@ -169,14 +176,15 @@ class Regressor:
     
     
     
-    def _metrics(self, test, threshold = 0.5):
+    
+    def _metrics(self, y_test, threshold = 0.5):
             
         classification = np.array((self.prediction >= threshold), dtype=np.int)
     
-        TP = classification[(classification == 1) & (classification == test)].size
-        FP = classification[(classification == 1) & (classification != test)].size
-        TN = classification[(classification == 0) & (classification == test)].size
-        FN = classification[(classification == 0) & (classification != test)].size
+        TP = classification[(classification == 1) & (classification == y_test)].size
+        FP = classification[(classification == 1) & (classification != y_test)].size
+        TN = classification[(classification == 0) & (classification == y_test)].size
+        FN = classification[(classification == 0) & (classification != y_test)].size
 
         epsilon = 1e-7
         self.accuracy = (TP+TN) / (TP+TN+FP+FN)
@@ -186,11 +194,12 @@ class Regressor:
             
         return np.array([[TP, FP], [FN, TN]])
     
+    
 
  
-    def metrics(self, test, threshold = 0.5):
+    def metrics(self, y_test, threshold = 0.5):
         
-        self.confusion_matrix = self._metrics(test, threshold)
+        self.confusion_matrix = self._metrics(y_test, threshold)
         
         print(f'Accuracy: {self.accuracy}\nPrecision: {self.precision}\nRecall: {self.recall}\nF1 score: {self.F1}', end='\n\n')
         
@@ -204,8 +213,10 @@ class Regressor:
                     xticklabels=['P','N'],
                     yticklabels=['P','N'])
         
+        plt.yticks(rotation=0)
         plt.title('Confusion Matrix', fontsize=14)
         plt.show()
+        
             
 
 
@@ -228,6 +239,7 @@ class Regressor:
         plt.ylabel('TPR')
         plt.title('ROC', fontsize=15)
         plt.show()
+        
         
 
         
@@ -274,6 +286,7 @@ class Regressor:
                     xticklabels=['P','N'],
                     yticklabels=['P','N'])
         
+        plt.yticks(rotation=0)
         plt.title('Confusion Matrix', fontsize=14)
         plt.show()
               

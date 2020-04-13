@@ -4,10 +4,12 @@ import numpy as np
 
 
 
-def var_to_cat(dataframe, kind, ref, col=4, size=(13,6), **kwargs):
+def var_to_cat(dataframe, kind, ref, col = 4, size = (13,6),  **kwargs):
     
     df_col = dataframe.select_dtypes(kind)
     col_idx = list(df_col.columns[df_col.columns != ref])
+    #col_idx = list(df_col.columns)
+    #col_idx.remove(ref)
     lenght = len(col_idx)
     row =len(list(range(0, lenght, col)))
     
@@ -16,14 +18,17 @@ def var_to_cat(dataframe, kind, ref, col=4, size=(13,6), **kwargs):
                             figsize=size, 
                             constrained_layout=True)
     
-    for i, ax in enumerate(fig.axes): 
+    for i, ax in enumerate(fig.axes):
         
         if i < lenght:
             if kind == 'category':
-                sns.countplot(data=dataframe, x=col_idx[i] , hue=ref, ax=ax, **kwargs)    
+                sns.countplot(data=dataframe, x=col_idx[i] , hue=ref, ax=ax, **kwargs)
             
             else:
                 sns.boxplot(data=dataframe, x=ref, y=col_idx[i], ax=ax, width=.5, **kwargs)
+                mean = df_col[col_idx[i]].mean()
+                ax.axhline(y=mean, c='r', ls='--', label='mean')
+                ax.legend(loc='upper center')
         
         else:
             ax.remove()
@@ -34,10 +39,10 @@ def var_to_cat(dataframe, kind, ref, col=4, size=(13,6), **kwargs):
 def hist(dataframe, 
          col = 4, 
          ref = None, 
-         size=(13,10), 
-         edgecolor='k', 
-         bins=15,
-         alpha=.5,
+         size = (13,10), 
+         edgecolor = 'k', 
+         bins = 15,
+         alpha = .5,
          **kwargs):
     
     col_idx = list(dataframe.columns[dataframe.columns != ref])
