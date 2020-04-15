@@ -4,31 +4,45 @@ import numpy as np
 
 
 
-def var_to_cat(dataframe, kind, ref, col = 4, size = (13,6),  **kwargs):
+def var_vs_target(dataframe, 
+                  kind, 
+                  ref = None, 
+                  col = 4, 
+                  xsize = 12, 
+                  **kwargs):
     
     df_col = dataframe.select_dtypes(kind)
-    col_idx = list(df_col.columns[df_col.columns != ref])
-    #col_idx = list(df_col.columns)
-    #col_idx.remove(ref)
+    col_idx = df_col.columns[df_col.columns != ref]
     lenght = len(col_idx)
     row =len(list(range(0, lenght, col)))
     
     fig, axs = plt.subplots(row, 
                             col, 
-                            figsize=size, 
+                            figsize=(xsize,((xsize/col)*.75)*row), 
                             constrained_layout=True)
     
-    for i, ax in enumerate(fig.axes):
+    for i, ax in enumerate(axs.flat):
         
         if i < lenght:
             if kind == 'category':
-                sns.countplot(data=dataframe, x=col_idx[i] , hue=ref, ax=ax, **kwargs)
+                sns.countplot(data=dataframe, 
+                              x=col_idx[i] , 
+                              hue=ref, 
+                              ax=ax, 
+                              **kwargs)
             
             else:
-                sns.boxplot(data=dataframe, x=ref, y=col_idx[i], ax=ax, width=.5, **kwargs)
+                sns.boxplot(data=dataframe, 
+                            x=ref, 
+                            y=col_idx[i], 
+                            ax=ax, 
+                            width=.5,
+                            saturation=.5,
+                            **kwargs)
+                
                 mean = df_col[col_idx[i]].mean()
                 ax.axhline(y=mean, c='r', ls='--', label='mean')
-                ax.legend(loc='upper center')
+                ax.legend(loc='best', framealpha=.3)
         
         else:
             ax.remove()
@@ -36,42 +50,107 @@ def var_to_cat(dataframe, kind, ref, col = 4, size = (13,6),  **kwargs):
         
 
         
+#def hist(dataframe, 
+#         col = 4, 
+#         ref = None, 
+#         xsize = 11,
+#         **kwargs):
+#    
+#    col_idx = dataframe.columns[dataframe.columns != ref]
+#    lenght = len(col_idx)
+#    row = len(list(range(0, lenght, col)))
+#    label = dataframe[ref].unique()
+#    
+#    (_, g0), (_, g1) = dataframe.groupby(ref)
+#   
+#    fig, axs = plt.subplots(row, 
+#                            col, 
+#                            figsize=(xsize,((xsize/col)*.75)*row), 
+#                            constrained_layout=True)
+#    
+#    for i, ax in enumerate(axs.flat):
+#        
+#        if i < lenght:
+#            if dataframe[col_idx[i]].dtype.name == 'category':
+#                kde = False
+#                norm_hist=False
+#            else:
+#                kde = True
+#                norm_hist = True
+#                
+#            sns.distplot(g0[col_idx[i]],
+#                         kde=kde,
+#                         hist_kws={'histtype':'step', 'fill':True}, 
+#                         kde_kws={'shade':False}, 
+#                         norm_hist=norm_hist, 
+#                         ax=ax, 
+#                         axlabel=False, 
+#                         **kwargs)
+#            sns.distplot(g1[col_idx[i]],
+#                         kde=kde,
+#                         hist_kws={'histtype':'step', 'fill':True}, 
+#                         kde_kws={'shade':False}, 
+#                         norm_hist=norm_hist, 
+#                         ax=ax, 
+#                         axlabel=False, 
+#                         **kwargs)
+#            ax.set_title(col_idx[i])
+#            ax.legend(label, title=ref, loc='best')
+#            
+#        else:
+#            ax.remove()
+
+
 def hist(dataframe, 
          col = 4, 
          ref = None, 
-         size = (13,10), 
-         edgecolor = 'k', 
-         bins = 15,
-         alpha = .5,
+         xsize = 12,
          **kwargs):
     
-    col_idx = list(dataframe.columns[dataframe.columns != ref])
+    col_idx = dataframe.columns[dataframe.columns != ref]
     lenght = len(col_idx)
     row = len(list(range(0, lenght, col)))
     label = dataframe[ref].unique()
-   
+    
+    g0 = dataframe[dataframe[ref] == 0]
+    g1 = dataframe[dataframe[ref] == 1]
+    
     fig, axs = plt.subplots(row, 
                             col, 
-                            figsize=size, 
+                            figsize=(xsize,((xsize/col)*.75)*row), 
                             constrained_layout=True)
-    
-    for i, ax in enumerate(fig.axes):
+
+    for i, ax in enumerate(axs.flat):
         
         if i < lenght:
-            dataframe.groupby(ref)[col_idx[i]].hist(histtype='stepfilled',
-                                                    density=True,  
-                                                    ax=ax,
-                                                    alpha=alpha,
-                                                    bins=bins,
-                                                    edgecolor='k',
-                                                    **kwargs)
-                                                     
-            ax.set_xlabel(col_idx[i])
-            ax.legend(label, title=ref, loc='best')
+            if dataframe.dtypes[i].name != 'category':
+                ax.hist(dataframe[col_idx[i]], 
+                        histtype='stepfilled', 
+                        alpha=.55,
+                        density=True,
+                        color='gray',
+                        **kwargs)
+                sns.kdeplot(g0[col_idx[i]], ax=ax)
+                sns.kdeplot(g1[col_idx[i]], ax=ax)
+                
+            else:
+                ax.hist(dataframe[col_idx[i]], 
+                        histtype='stepfilled', 
+                        alpha=.6, 
+                        **kwargs)
+                ax.hist(g0[col_idx[i]], 
+                        histtype='stepfilled', 
+                        alpha=.8, 
+                        **kwargs)
+            
+            ax.set_title(col_idx[i])
+            ax.legend(label, 
+                      title=ref, 
+                      loc='best', 
+                      framealpha=.2)
             
         else:
             ax.remove()
-    
     
 
     

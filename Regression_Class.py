@@ -32,7 +32,7 @@ class Regressor:
         
         X = dataset.drop(self.target, axis=1).to_numpy()
         X = np.insert(X, 0, 1, axis=1)
-        y = dataset[[self.target]].to_numpy() #double square brakets return a column vector 
+        y = dataset[[self.target]].to_numpy() #double squares brakets return a column vector 
 
         return X, y   
     
@@ -138,7 +138,6 @@ class Regressor:
             
         plt.subplot2grid((5, 1), (0, 0), rowspan=2)
         plt.plot(J, 'r')
-        plt.xlabel('epochs', fontsize=13)
         plt.ylabel('error', fontsize=13)
 
             
@@ -148,8 +147,8 @@ class Regressor:
         for i in range(w.shape[2]):
             plt.plot(w[...,i], label=f'W_{i}')
             
-        plt.legend(frameon=True, bbox_to_anchor=(1.1, 1.0), framealpha=.6)
-        plt.title(f'$\gamma$ = {self.reg_rate}', fontsize=14)
+        plt.legend(frameon=True, bbox_to_anchor=(1.05, 1.0), framealpha=.4)
+        plt.text(0, -0.7, f'$\gamma$ = {self.reg_rate}', fontsize=14)
         plt.xlabel('epochs', fontsize=13)
         plt.ylabel('weights', fontsize=13)
         
@@ -199,12 +198,18 @@ class Regressor:
  
     def metrics(self, y_test, threshold = 0.5):
         
-        self.confusion_matrix = self._metrics(y_test, threshold)
+        self._conf_matr = self._metrics(y_test, threshold)
+        self.y_test = y_test
         
         print(f'Accuracy: {self.accuracy}\nPrecision: {self.precision}\nRecall: {self.recall}\nF1 score: {self.F1}', end='\n\n')
         
+        
+        
+    
+    @property
+    def confusion_matrix(self):
         plt.figure(figsize=(3,3))
-        sns.heatmap(self.confusion_matrix, 
+        sns.heatmap(self._conf_matr, 
                     annot=True, 
                     fmt='d',  
                     center=0, 
@@ -217,12 +222,13 @@ class Regressor:
         plt.title('Confusion Matrix', fontsize=14)
         plt.show()
         
+        
             
 
-
-    def ROC(self, test):
+    @property
+    def ROC(self):
         
-        results = (self._metrics(test, i).ravel() for i in np.arange(0.0, 1.1, 0.01))
+        results = (self._metrics(self.y_test, i).ravel() for i in np.arange(0.0, 1.1, 0.01))
         TP, FP, FN, TN = zip(*results)
     
         epsilon = 1e-7
@@ -263,10 +269,10 @@ class Regressor:
         train = map(reg_CV.matrix, df_train)
         test = map(reg_CV.matrix, df_test)
 
-        conf_matr = np.sum([reg_CV.fit(a, b).predict(c)._metrics(d, threshold) for (a, b), (c, d) in zip(train, test)], 
-                           axis=0)
+        self._conf_matr = np.sum([reg_CV.fit(a, b).predict(c)._metrics(d, threshold) for (a, b), (c, d) in zip(train, test)], 
+                                       axis=0)
         
-        (TP, FP), (FN, TN) = conf_matr
+        (TP, FP), (FN, TN) = self._conf_matr
     
         epsilon = 1e-7
         a = (TP+TN) / (TP+TN+FP+FN)
@@ -277,7 +283,7 @@ class Regressor:
         print(f'Accuracy: {a}\nPrecision: {p}\nRecall: {r}\nF1 score: {F1}', end='\n\n')
         
         plt.figure(figsize=(3,3))
-        sns.heatmap(conf_matr, 
+        sns.heatmap(self._conf_matr, 
                     annot=True, 
                     fmt='d',  
                     center=0,
