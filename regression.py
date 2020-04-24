@@ -15,7 +15,6 @@ class Regressor:
                  epochs = 1000,
                  logistic = True):
         
-        
         self.l_rate = l_rate
         self.stop = stop
         self.reg_rate = reg_rate
@@ -84,9 +83,11 @@ class Regressor:
         for e in range(self.epochs):
             
             H = X_train @ weights.T
+            
             #for numeric stability
-            _sigm, sigm_ = 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H))
-            H = np.where(H>=0, _sigm, sigm_) if log else H
+            H = np.where(H>=0, 
+                         1/(1+np.exp(-H)), 
+                         np.exp(H)/(1+np.exp(H))) if log else H
             
             #gradient descend
             dJ = (1/n) * ((H-y_train).T @ X_train)
@@ -123,9 +124,10 @@ class Regressor:
         self.y_test = self._y(df_test)
         
         H = X_test @ self._weights_.T
-        _sigm, sigm_ = 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H))
-        
-        self.prediction = np.where(H>=0, _sigm, sigm_ ) if self.logistic else H
+    
+        self.prediction = np.where(H>=0, 
+                                   1/(1+np.exp(-H)), 
+                                   np.exp(H)/(1+np.exp(H))) if self.logistic else H
         
         return self
     
@@ -220,6 +222,7 @@ class Regressor:
     def _metrics(self, threshold, full = True):
             
         classes = np.array((self.prediction >= threshold), dtype=np.int)
+        self.classes = classes
     
         TP = classes[(classes == 1) & (classes == self.y_test)].size
         FP = classes[(classes == 1) & (classes != self.y_test)].size
@@ -238,11 +241,11 @@ class Regressor:
     
     
 
-    def metrics(self, threshold):
+    def metrics(self, threshold = .5):
         
-        if (not hasattr(self, '_conf_matr')) or (threshold != self.threshold):
-            self._conf_matr = self._metrics(threshold)
-            self.threshold = threshold
+        #if threshold != self.threshold:
+        self._conf_matr = self._metrics(threshold)
+        self.threshold = threshold
             
         print(f'Accuracy: {round(self.a, 3)}')
         print(f'Precision: {round(self.p, 3)}')
@@ -302,54 +305,78 @@ class Regressor:
         plt.show()
         
         
+        
+        
 
         
-    def cross_val(self, 
-                  dataset, 
-                  folds = 10, 
-                  threshold = 0.5):
         
-        reg_CV = Regressor(
-            l_rate=self.l_rate,
-            stop=self.stop,
-            reg_rate=self.reg_rate,
-            beta=self.beta,
-            epochs=self.epochs,
-            logistic=self.logistic)
         
+        
+class CrossValidation:
+    
+    def __init__(self, model = None, scaler = None):
+        
+        from copy import copy
+        
+        self.Model = copy(model)
+        self.Scaler = copy(scaler)
+        self.target = self.Model.target
+        self.scaler = self.Scaler.scaler
+        self.num = self.Scaler.num
+        
+        
+        
+       
+    def metrics(self, dataset, folds = 10, threshold = None):
+        
+        Scaler = self.Scaler
+        Model = self.Model
+        #Model._weights_ = None
+        
+        self.threshold = Model.threshold if threshold is None else threshold
         
         assert 1 < folds <= len(dataset), "folds must be greater than 1 and less than or equal to dataset's length"
         
+        dataset = dataset.sample(frac=1, random_state=3)
+    
         slices = range(0, len(dataset)+1, len(dataset)//folds)
         
         df_train = (dataset.drop(index=range(slices[i], slices[i+1])) for i in range(folds))
         df_test = (dataset.iloc[slices[i]:slices[i+1]] for i in range(folds))
         
-        
-        if hasattr(self, 'scaler'):
-            df_train = (reg_CV.fitnscale(df, self.scaler, self.num) for df in df_train)                     
-            df_test = (reg_CV.scale(df) for df in df_test)
-        
-        
-        reg_CV._conf_matr = np.sum([
-            reg_CV.fitnpredict(a, b, self.target)._metrics(self.threshold, False) for a, b in zip(df_train, df_test)], 
-            axis=0)
-        
-        (TP, FP), (FN, TN) = reg_CV._conf_matr
+        if hasattr(Scaler, 'scaler'):
+            
+            df_train = (Scaler.fitnscale(df, self.scaler, self.num) for df in df_train)                     
+            df_test = (Scaler.scale(df) for df in df_test)
+            
+            
+        Model._conf_matr = np.sum([
+            Model.fitnpredict(a, b, self.target)._metrics(self.threshold, False) 
+            for a, b in zip(df_train, df_test)], axis=0)
+            
+            
+        (TP, FP), (FN, TN) = Model._conf_matr
     
         eps = 1e-7
-        reg_CV.a = (TP+TN) / (TP+TN+FP+FN)
-        reg_CV.p = TP / (TP+FP+eps)
-        reg_CV.r = TP / (TP+FN+eps)
-        reg_CV.F1 = (2*reg_CV.p*reg_CV.r) / (reg_CV.p+reg_CV.r)
+        self.a = (TP+TN) / (TP+TN+FP+FN)
+        self.p = TP / (TP+FP+eps)
+        self.r = TP / (TP+FN+eps)
+        self.F1 = (2*self.p*self.r) / (self.p+self.r)
         
-        reg_CV.threshold = self.threshold
-        reg_CV.metrics(self.threshold)
+        print(f'Accuracy: {round(self.a, 3)}')
+        print(f'Precision: {round(self.p, 3)}')
+        print(f'Recall: {round(self.r, 3)}')
+        print(f'F1 score: {round(self.F1, 3)}', end='\n\n')
+        
+        Model.confusion_matrix
+        
+        
+        
 
         
-        
-        
-        
+    
+    
+               
         
 class PreProcessing:
     
@@ -406,18 +433,14 @@ class PreProcessing:
             
         if self.scaler == 'robust':
             df_scaled.loc[:,self.num] = (df_scaled.loc[:,self.num]-self.median) / self.IQR
-
-            return df_scaled
-                
+         
         if self.scaler == 'standard':
             df_scaled.loc[:,self.num] = (df_scaled.loc[:,self.num]-self.mean) / self.std
-       
-            return df_scaled 
                 
         if self.scaler == 'minmax':
             df_scaled.loc[:,self.num] = (df_scaled.loc[:,self.num]-self.min) / (self.max-self.min)
 
-            return df_scaled
+        return df_scaled
         
         
     
@@ -452,9 +475,7 @@ class PreProcessing:
             self.low = self.mean - 1.5 * self.IQR
             self.up = self.mean + 1.5 * self.IQR
             
-            data.loc[:,self.num] = data.loc[:,self.num].clip(lower=self.low, upper=self.up, axis=1)
-            
-            return data
+            data.loc[:,self.num] = data[self.num].clip(lower=self.low, upper=self.up, axis=1)  
     
         if kind == 'standard':
             self.std = data[self.num].std()
@@ -462,9 +483,9 @@ class PreProcessing:
             self.low = self.mean - s
             self.up = self.mean + s
             
-            data.loc[:,self.num] = data.loc[:,self.num].clip(lower=self.low, upper=self.up, axis=1)
+            data.loc[:,self.num] = data[self.num].clip(lower=self.low, upper=self.up, axis=1)
             
-            return data
+        return data
     
         
         
