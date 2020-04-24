@@ -38,7 +38,7 @@ class Regressor:
 
     def _y(self, data):
     
-        y = data[[self.target]].to_numpy() # with double squares-brakets return a column vector
+        y = data[[self.target]].to_numpy() #with double squares-brakets return a column vector
         
         return y
     
@@ -109,8 +109,7 @@ class Regressor:
             print('max epochs reached')
             
             
-        self.w_list = np.array(w_list)
-        
+        self.w_list = np.array(w_list) 
         self._weights_ = weights
 
         return self
@@ -213,6 +212,7 @@ class Regressor:
                  transform=ax2.transAxes)
         plt.xlabel('epochs', fontsize=13)
         plt.ylabel('weights', fontsize=13)
+        sns.despine()
         
         plt.show()
         
@@ -243,7 +243,6 @@ class Regressor:
 
     def metrics(self, threshold = .5):
         
-        #if threshold != self.threshold:
         self._conf_matr = self._metrics(threshold)
         self.threshold = threshold
             
@@ -326,7 +325,7 @@ class CrossValidation:
         
         
         
-       
+        
     def metrics(self, dataset, folds = 10, threshold = None):
         
         Scaler = self.Scaler
@@ -336,16 +335,13 @@ class CrossValidation:
         self.threshold = Model.threshold if threshold is None else threshold
         
         assert 1 < folds <= len(dataset), "folds must be greater than 1 and less than or equal to dataset's length"
-        
-        dataset = dataset.sample(frac=1, random_state=3)
     
         slices = range(0, len(dataset)+1, len(dataset)//folds)
         
         df_train = (dataset.drop(index=range(slices[i], slices[i+1])) for i in range(folds))
         df_test = (dataset.iloc[slices[i]:slices[i+1]] for i in range(folds))
         
-        if hasattr(Scaler, 'scaler'):
-            
+        if hasattr(Scaler, 'scaler'): 
             df_train = (Scaler.fitnscale(df, self.scaler, self.num) for df in df_train)                     
             df_test = (Scaler.scale(df) for df in df_test)
             
