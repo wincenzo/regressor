@@ -345,7 +345,6 @@ class CrossValidation:
             df_train = (Scaler.fitnscale(df, self.scaler, self.num) for df in df_train)                     
             df_test = (Scaler.scale(df) for df in df_test)
             
-            
         Model._conf_matr = np.sum([
             Model.fitnpredict(a, b, self.target)._metrics(self.threshold, False) 
             for a, b in zip(df_train, df_test)], axis=0)
