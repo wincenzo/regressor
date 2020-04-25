@@ -124,9 +124,9 @@ class Regressor:
         
         H = X_test @ self._weights_.T
     
-        self.prediction = np.where(H>=0, 
-                                   1/(1+np.exp(-H)), 
-                                   np.exp(H)/(1+np.exp(H))) if self.logistic else H
+        self.probabilities = np.where(H>=0, 
+                                      1/(1+np.exp(-H)), 
+                                      np.exp(H)/(1+np.exp(H))) if self.logistic else H
         
         return self
     
@@ -219,9 +219,9 @@ class Regressor:
     
     
     
-    def _metrics(self, threshold, full = True):
+    def _metrics(self, threshold):
             
-        classes = np.array((self.prediction >= threshold), dtype=np.int)
+        classes = np.array((self.probabilities >= threshold), dtype=np.int)
         self.classes = classes
     
         TP = classes[(classes == 1) & (classes == self.y_test)].size
@@ -229,22 +229,30 @@ class Regressor:
         TN = classes[(classes == 0) & (classes == self.y_test)].size
         FN = classes[(classes == 0) & (classes != self.y_test)].size
         
-        if full:
-            eps = 1e-7
-            self.a = (TP+TN) / (TP+TN+FP+FN)
-            self.p = TP / (TP+FP+eps)
-            self.r = TP / (TP+FN+eps)
-            self.F1 = (2*self.p*self.r) / (self.p+self.r+eps) 
+        #if full: 
             
-        return np.array([[TP, FP], [FN, TN]])
+        return np.array([TP, FP, FN, TN])
     
     
     
 
     def metrics(self, threshold = .5):
         
-        self._conf_matr = self._metrics(threshold)
+        if (not hasattr(self, '_conf_matr')) or (threshold != self.threshold):
+            self._conf_matr = self._metrics(threshold)
+        
         self.threshold = threshold
+        
+        #useful to reuse in CrossValidation
+        self._conf_matr = np.sum(
+            np.vstack((self._conf_matr, [0, 0, 0, 0])), axis=0)
+        
+        TP, FP, FN, TN = self._conf_matr
+        eps = 1e-7
+        self.a = (TP+TN) / (TP+TN+FP+FN)
+        self.p = TP / (TP+FP+eps)
+        self.r = TP / (TP+FN+eps)
+        self.F1 = (2*self.p*self.r) / (self.p+self.r+eps)
             
         print(f'Accuracy: {round(self.a, 3)}')
         print(f'Precision: {round(self.p, 3)}')
@@ -257,8 +265,11 @@ class Regressor:
          
     @property
     def confusion_matrix(self):
+        
+        matrix = self._conf_matr.reshape((2, 2))
+        
         plt.figure(figsize=(3,3))
-        sns.heatmap(self._conf_matr, 
+        sns.heatmap(matrix, 
                     annot=True, 
                     fmt='d',  
                     center=0, 
@@ -277,7 +288,7 @@ class Regressor:
     @property
     def ROC(self):
         
-        results = (self._metrics(i, False).ravel() for i in np.arange(0.0, 1.1, 0.01))
+        results = (self._metrics(i) for i in np.arange(0.0, 1.1, 0.01))
         TP, FP, FN, TN = zip(*results)
     
         eps = 1e-7
@@ -328,13 +339,14 @@ class CrossValidation:
         
     def metrics(self, dataset, folds = 10, threshold = None):
         
+        assert 1 < folds <= len(dataset),\
+        "folds must be greater than 1 and less than or equal to dataset's length"
+        
         Scaler = self.Scaler
         Model = self.Model
         #Model._weights_ = None
         
         self.threshold = Model.threshold if threshold is None else threshold
-        
-        assert 1 < folds <= len(dataset), "folds must be greater than 1 and less than or equal to dataset's length"
     
         slices = range(0, len(dataset)+1, len(dataset)//folds)
         
@@ -345,26 +357,11 @@ class CrossValidation:
             df_train = (Scaler.fitnscale(df, self.scaler, self.num) for df in df_train)                     
             df_test = (Scaler.scale(df) for df in df_test)
             
-        Model._conf_matr = np.sum([
-            Model.fitnpredict(a, b, self.target)._metrics(self.threshold, False) 
-            for a, b in zip(df_train, df_test)], axis=0)
-            
-            
-        (TP, FP), (FN, TN) = Model._conf_matr
-    
-        eps = 1e-7
-        self.a = (TP+TN) / (TP+TN+FP+FN)
-        self.p = TP / (TP+FP+eps)
-        self.r = TP / (TP+FN+eps)
-        self.F1 = (2*self.p*self.r) / (self.p+self.r)
+        Model._conf_matr = np.array([Model.fitnpredict(a, b, self.target)._metrics(self.threshold) 
+                                     for a, b in zip(df_train, df_test)])
+               
         
-        print(f'Accuracy: {round(self.a, 3)}')
-        print(f'Precision: {round(self.p, 3)}')
-        print(f'Recall: {round(self.r, 3)}')
-        print(f'F1 score: {round(self.F1, 3)}', end='\n\n')
-        
-        Model.confusion_matrix
-        
+        Model.metrics(self.threshold)
         
         
 
@@ -398,7 +395,8 @@ class PreProcessing:
                    kind = None, 
                    columns = None):
         
-        assert kind != None, 'Please choose a method: "robust" - "standard" - "minmax"'
+        assert kind != None,\
+        'Please choose a method: "robust" - "standard" - "minmax"'
         
         self.num = slice(None) if columns is None else columns
         
@@ -427,13 +425,13 @@ class PreProcessing:
         df_scaled = data.copy()
             
         if self.scaler == 'robust':
-            df_scaled.loc[:,self.num] = (df_scaled.loc[:,self.num]-self.median) / self.IQR
+            df_scaled.loc[:,self.num] = (df_scaled[self.num]-self.median) / self.IQR
          
         if self.scaler == 'standard':
-            df_scaled.loc[:,self.num] = (df_scaled.loc[:,self.num]-self.mean) / self.std
+            df_scaled.loc[:,self.num] = (df_scaled[self.num]-self.mean) / self.std
                 
         if self.scaler == 'minmax':
-            df_scaled.loc[:,self.num] = (df_scaled.loc[:,self.num]-self.min) / (self.max-self.min)
+            df_scaled.loc[:,self.num] = (df_scaled[self.num]-self.min) / (self.max-self.min)
 
         return df_scaled
         
