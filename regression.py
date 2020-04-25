@@ -229,8 +229,6 @@ class Regressor:
         TN = classes[(classes == 0) & (classes == self.y_test)].size
         FN = classes[(classes == 0) & (classes != self.y_test)].size
         
-        #if full: 
-            
         return np.array([TP, FP, FN, TN])
     
     
