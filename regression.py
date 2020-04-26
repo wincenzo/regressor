@@ -21,8 +21,8 @@ class Regressor:
         self.beta = beta
         self.epochs = epochs
         self.logistic = logistic
-        self._weights_ = None
-        
+        self.weights = None
+    
         
         
                
@@ -71,7 +71,7 @@ class Regressor:
         log = self.logistic
         
         np.random.seed(3)
-        weights = np.random.rand(1, X_train.shape[1]) if self._weights_ is None or reset else self._weights_
+        weights = np.random.rand(1, X_train.shape[1]) if self.weights is None or reset else self.weights
         #weights = np.ones((1, X_train.shape[1])) if self._weights_ is None or reset else self._weights_
     
         gamma = np.full((1, X_train.shape[1]), r/n)
@@ -110,7 +110,7 @@ class Regressor:
             
             
         self.w_list = np.array(w_list) 
-        self._weights_ = weights
+        self.weights = weights
 
         return self
     
@@ -122,7 +122,7 @@ class Regressor:
         X_test = self._X(df_test)
         self.y_test = self._y(df_test)
         
-        H = X_test @ self._weights_.T
+        H = X_test @ self.weights.T
     
         self.probabilities = np.where(H>=0, 
                                       1/(1+np.exp(-H)), 
@@ -153,7 +153,7 @@ class Regressor:
         features = self.features.copy()  
         features.insert(0, 'bias')
         parameters = pd.DataFrame({'features': features, 
-                                   'weights': self._weights_.ravel()})
+                                   'weights': self.weights.ravel()})
         
         col = lambda x: 'color:red' if x == 0 else "color:''"
         parameters = parameters.style.applymap(col, subset=['weights'])
@@ -241,11 +241,8 @@ class Regressor:
         
         self.threshold = threshold
         
-        #useful to reuse in CrossValidation
-        self._conf_matr = np.sum(
-            np.vstack((self._conf_matr, [0, 0, 0, 0])), axis=0)
-        
         TP, FP, FN, TN = self._conf_matr
+        
         eps = 1e-7
         self.a = (TP+TN) / (TP+TN+FP+FN)
         self.p = TP / (TP+FP+eps)
@@ -355,9 +352,10 @@ class CrossValidation:
             df_train = (Scaler.fitnscale(df, self.scaler, self.num) for df in df_train)                     
             df_test = (Scaler.scale(df) for df in df_test)
             
-        Model._conf_matr = np.array([Model.fitnpredict(a, b, self.target)._metrics(self.threshold) 
-                                     for a, b in zip(df_train, df_test)])
-               
+        Model._conf_matr = [Model.fitnpredict(a, b, self.target)._metrics(self.threshold) 
+                            for a, b in zip(df_train, df_test)]
+        
+        Model._conf_matr = np.sum(Model._conf_matr, axis=0)    
         
         Model.metrics(self.threshold)
         
