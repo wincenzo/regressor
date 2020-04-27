@@ -260,6 +260,9 @@ class Regressor:
     def metrics(self, threshold = None):
         
         if self.logistic:
+            assert threshold is not None,\
+            'Please assign a valid threshold value'
+            
             if (not hasattr(self, '_conf_matr')) or (threshold != self.threshold):
                 self._conf_matr = self._metrics(threshold)
             
@@ -359,8 +362,7 @@ class CrossValidation:
         self.Scaler = copy(scaler)
 
         
-        
-        
+             
         
     def metrics(self, dataset, folds = 10, threshold = None):
         
