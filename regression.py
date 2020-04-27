@@ -13,7 +13,7 @@ class Regressor:
                  reg_rate = 0.,
                  beta = .5,
                  epochs = 1000,
-                 logistic = True):
+                 logistic = None):
         
         self.l_rate = l_rate
         self.stop = stop
@@ -22,7 +22,7 @@ class Regressor:
         self.epochs = epochs
         self.logistic = logistic
         self.weights = None
-    
+        
         
         
                
@@ -84,10 +84,17 @@ class Regressor:
             
             H = X_train @ weights.T
             
-            #for numeric stability
-            H = np.where(H>=0, 
-                         1/(1+np.exp(-H)), 
-                         np.exp(H)/(1+np.exp(H))) if log else H
+            if log is not None:
+                H = np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H))) if log else H
+                
+            else:
+                if df_train[self.target].nunique() == 2:
+                    H = np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H))) 
+                    self.logistic = True
+                    
+                else:
+                    self.logistic = False
+
             
             #gradient descend
             dJ = (1/n) * ((H-y_train).T @ X_train)
@@ -124,10 +131,8 @@ class Regressor:
         
         H = X_test @ self.weights.T
     
-        self.probabilities = np.where(H>=0, 
-                                      1/(1+np.exp(-H)), 
-                                      np.exp(H)/(1+np.exp(H))) if self.logistic else H
-        
+        self.prediction = np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H))) if self.logistic else H
+                
         return self
     
     
@@ -168,9 +173,16 @@ class Regressor:
         w_list_T = np.transpose(self.w_list, axes=[0,2,1])
             
         H = self.X @ w_list_T
-        H = 1 / (1 + np.exp(-H)) if self.logistic else H
+        H = np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H))) if self.logistic else H
+                
+        if self.logistic:
+            J = (-1/self.n) * (self.y.T @ np.log(H) + (1-self.y).T @ np.log(1-H))
             
-        J = (-1/self.n) * (self.y.T @ np.log(H) + (1-self.y).T @ np.log(1-H))
+        else:
+            k = (self.y-H)
+            k_T = np.transpose(k, axes=[0,2,1])
+            J = (1/(2*self.n)) * k_T @ k
+            
         l2 = ((1-self.beta)/2) * (self.w_list @ w_list_T)
         l1 = self.beta * np.linalg.norm(self.w_list, ord=1, axis=(1,2))[:,np.newaxis,np.newaxis]
         J = (J+(self.reg_rate/self.n)*(l1+l2)).ravel()
@@ -220,41 +232,64 @@ class Regressor:
     
     
     def _metrics(self, threshold):
-            
-        classes = np.array((self.probabilities >= threshold), dtype=np.int)
-        self.classes = classes
-    
-        TP = classes[(classes == 1) & (classes == self.y_test)].size
-        FP = classes[(classes == 1) & (classes != self.y_test)].size
-        TN = classes[(classes == 0) & (classes == self.y_test)].size
-        FN = classes[(classes == 0) & (classes != self.y_test)].size
         
-        return np.array([TP, FP, FN, TN])
+        if self.logistic:
+            classes = np.array((self.prediction >= threshold), dtype=np.int)
+            self.classes = classes
+        
+            TP = classes[(classes == 1) & (classes == self.y_test)].size
+            FP = classes[(classes == 1) & (classes != self.y_test)].size
+            TN = classes[(classes == 0) & (classes == self.y_test)].size
+            FN = classes[(classes == 0) & (classes != self.y_test)].size
+            
+            return np.array([TP, FP, FN, TN])
+        
+        else:
+            #self.R_2 = 1 - (np.sum((self.y_test-self.prediction)**2) / 
+            #                np.sum((self.y_test-self.y_test.mean())**2))
+            eps = 1e-7
+            RSS = (self.y_test-self.prediction).T @ (self.y_test-self.prediction)
+            TSS = (self.y_test-self.y_test.mean()).T @ (self.y_test-self.y_test.mean())
+            self.R_2 = 1 - (RSS.ravel() / TSS.ravel()) 
+                       
+            self.RMSE = np.sqrt((1/self.n) * ((self.y_test-self.prediction).T @ (self.y_test-self.prediction)))
+            
+            return np.array([self.R_2, self.RMSE])
     
     
     
 
-    def metrics(self, threshold = .5):
+    def metrics(self, threshold = None):
         
-        if (not hasattr(self, '_conf_matr')) or (threshold != self.threshold):
-            self._conf_matr = self._metrics(threshold)
-        
-        self.threshold = threshold
-        
-        TP, FP, FN, TN = self._conf_matr
-        
-        eps = 1e-7
-        self.a = (TP+TN) / (TP+TN+FP+FN)
-        self.p = TP / (TP+FP+eps)
-        self.r = TP / (TP+FN+eps)
-        self.F1 = (2*self.p*self.r) / (self.p+self.r+eps)
+        if self.logistic:
+            if (not hasattr(self, '_conf_matr')) or (threshold != self.threshold):
+                self._conf_matr = self._metrics(threshold)
             
-        print(f'Accuracy: {round(self.a, 3)}')
-        print(f'Precision: {round(self.p, 3)}')
-        print(f'Recall: {round(self.r, 3)}')
-        print(f'F1 score: {round(self.F1, 3)}', end='\n\n')
-        
-        self.confusion_matrix
+            self.threshold = threshold
+            
+            TP, FP, FN, TN = self._conf_matr
+            
+            eps = 1e-7
+            self.a = (TP+TN) / (TP+TN+FP+FN)
+            self.p = TP / (TP+FP+eps)
+            self.r = TP / (TP+FN+eps)
+            self.F1 = (2*self.p*self.r) / (self.p+self.r+eps)
+                
+            print(f'Accuracy: {round(self.a, 3)}')
+            print(f'Precision: {round(self.p, 3)}')
+            print(f'Recall: {round(self.r, 3)}')
+            print(f'F1 score: {round(self.F1, 3)}', end='\n\n')
+            
+            self.confusion_matrix
+            
+        else:
+            if not hasattr(self, 'scores'):
+                self.threshold = None
+                self.R_2, self.RMSE = self._metrics(threshold)
+            
+            print(f'R^2 = {self.R_2.item()}')
+            print(f'RMSE = {self.RMSE.item()}')
+                            
         
         
          
@@ -325,9 +360,9 @@ class CrossValidation:
         
         self.Model = copy(model)
         self.Scaler = copy(scaler)
-        self.target = self.Model.target
-        self.scaler = self.Scaler.scaler
-        self.num = self.Scaler.num
+        #self.target = self.Model.target
+        #self.scaler = self.Scaler.scaler
+        #self.num = self.Scaler.num
         
         
         
@@ -339,9 +374,9 @@ class CrossValidation:
         
         Scaler = self.Scaler
         Model = self.Model
-        #Model._weights_ = None
+        #Model.weights = None
         
-        self.threshold = Model.threshold if threshold is None else threshold
+        target_idx = dataset.columns.get_loc(Model.target)
     
         slices = range(0, len(dataset)+1, len(dataset)//folds)
         
@@ -349,15 +384,29 @@ class CrossValidation:
         df_test = (dataset.iloc[slices[i]:slices[i+1]] for i in range(folds))
         
         if hasattr(Scaler, 'scaler'): 
-            df_train = (Scaler.fitnscale(df, self.scaler, self.num) for df in df_train)                     
+            df_train = (Scaler.fitnscale(df, Scaler.scaler, Scaler.num) for df in df_train)                     
             df_test = (Scaler.scale(df) for df in df_test)
             
-        Model._conf_matr = [Model.fitnpredict(a, b, self.target)._metrics(self.threshold) 
-                            for a, b in zip(df_train, df_test)]
+        if Model.logistic:
+            self.threshold = Model.threshold if threshold is None else threshold
+            
+            Model._conf_matr = [Model.fitnpredict(a, b, Model.target)._metrics(self.threshold) 
+                                for a, b in zip(df_train, df_test)]
+            Model._conf_matr = np.sum(Model._conf_matr, axis=0)    
         
-        Model._conf_matr = np.sum(Model._conf_matr, axis=0)    
+            Model.metrics(self.threshold)
         
-        Model.metrics(self.threshold)
+        else:
+            self.threshold = None
+            
+            _ = np.array([(Model.fitnpredict(a, b, Model.target).prediction.ravel(),
+                           Model.fitnpredict(a, b, Model.target).y_test.ravel())
+                           for a, b in zip(df_train, df_test)])
+    
+            Model.prediction = _[:,0,0]
+            Model.y_test = _[:,1,0]
+
+            Model.metrics(self.threshold)
         
         
 
