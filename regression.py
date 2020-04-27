@@ -245,12 +245,12 @@ class Regressor:
             return np.array([TP, FP, FN, TN])
         
         else:
-            eps = 1e-7
             RSS = (self.y_test-self.prediction).T @ (self.y_test-self.prediction)
             TSS = (self.y_test-self.y_test.mean()).T @ (self.y_test-self.y_test.mean())
             self.R_2 = 1 - (RSS.ravel() / TSS.ravel()) 
-                       
-            self.RMSE = np.sqrt((1/self.n) * ((self.y_test-self.prediction).T @ (self.y_test-self.prediction)))
+            
+            MSE = (1/self.n) * ((self.y_test-self.prediction).T @ (self.y_test-self.prediction))
+            self.RMSE = np.sqrt(MSE.ravel())
             
             return np.array([self.R_2, self.RMSE])
     
@@ -287,8 +287,7 @@ class Regressor:
             if not hasattr(self, 'scores'):
                 self.R_2, self.RMSE = self._metrics(threshold)
             
-            print(f'R^2 = {self.R_2.item()}')
-            print(f'RMSE = {self.RMSE.item()}')
+            print(f'R^2 = {self.R_2.item()}\n\nRMSE = {self.RMSE.item()}')
                             
         
         
@@ -394,7 +393,8 @@ class CrossValidation:
         else:
             self.threshold = None
             
-            _ = np.array([(Model.fitnpredict(a, b, Model.target).prediction.ravel(), Model.y_test.ravel())
+            _ = np.array([(Model.fitnpredict(a, b, Model.target).prediction.ravel(), 
+                           Model.y_test.ravel())
                            for a, b in zip(df_train, df_test)])
     
             Model.prediction = _[:,0,0]
@@ -434,8 +434,8 @@ class PreProcessing:
                    kind = None, 
                    columns = None):
         
-        assert kind != None,\
-        'Please choose a method: "robust" - "standard" - "minmax"'
+        assert kind in ("robust", "standard", "minmax"),\
+        'Please choose one of these method: "robust" - "standard" - "minmax"'
         
         self.num = slice(None) if columns is None else columns
         
@@ -494,7 +494,8 @@ class PreProcessing:
                       kind = None, 
                       columns = None):
         
-        assert kind != None, 'Please choose a method: "robust" - "standard"'
+        assert kind in ("robust", "standard"),\
+        'Please choose one of these method: "robust" - "standard"'
         
         self.num = slice(None) if columns is None else columns
         
