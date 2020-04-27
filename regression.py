@@ -245,8 +245,6 @@ class Regressor:
             return np.array([TP, FP, FN, TN])
         
         else:
-            #self.R_2 = 1 - (np.sum((self.y_test-self.prediction)**2) / 
-            #                np.sum((self.y_test-self.y_test.mean())**2))
             eps = 1e-7
             RSS = (self.y_test-self.prediction).T @ (self.y_test-self.prediction)
             TSS = (self.y_test-self.y_test.mean()).T @ (self.y_test-self.y_test.mean())
@@ -360,9 +358,7 @@ class CrossValidation:
         
         self.Model = copy(model)
         self.Scaler = copy(scaler)
-        #self.target = self.Model.target
-        #self.scaler = self.Scaler.scaler
-        #self.num = self.Scaler.num
+
         
         
         
