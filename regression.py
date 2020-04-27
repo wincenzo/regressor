@@ -285,7 +285,7 @@ class Regressor:
             
         else:
             if not hasattr(self, 'scores'):
-                self.R_2, self.RMSE = self._metrics()
+                self.R_2, self.RMSE = self._metrics(threshold)
             
             print(f'R^2 = {self.R_2.item()}')
             print(f'RMSE = {self.RMSE.item()}')
