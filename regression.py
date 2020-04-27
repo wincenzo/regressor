@@ -372,8 +372,6 @@ class CrossValidation:
         Scaler = self.Scaler
         Model = self.Model
         #Model.weights = None
-        
-        target_idx = dataset.columns.get_loc(Model.target)
     
         slices = range(0, len(dataset)+1, len(dataset)//folds)
         
