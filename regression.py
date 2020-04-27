@@ -394,8 +394,7 @@ class CrossValidation:
         else:
             self.threshold = None
             
-            _ = np.array([(Model.fitnpredict(a, b, Model.target).prediction.ravel(),
-                           Model.fitnpredict(a, b, Model.target).y_test.ravel())
+            _ = np.array([(Model.fitnpredict(a, b, Model.target).prediction.ravel(), Model.y_test.ravel())
                            for a, b in zip(df_train, df_test)])
     
             Model.prediction = _[:,0,0]
