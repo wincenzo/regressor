@@ -38,7 +38,7 @@ class Regressor:
 
     def _y(self, data):
     
-        y = data[[self.target]].to_numpy() #with double squares-brakets returns a column vector
+        y = data[[self.target]].to_numpy() #with double squares-brakets return a column vector
         
         return y
     
@@ -446,11 +446,11 @@ class PreProcessing:
             IQR = lambda x: x.quantile(.75) - x.quantile(.25) 
             self.IQR = data[self.num].apply(IQR)
             
-        if self.scaler == 'standard':
+        elif self.scaler == 'standard':
             self.mean = data[self.num].agg('mean')
             self.std = data[self.num].agg('std')
             
-        if self.scaler =='minmax':
+        elif self.scaler =='minmax':
             self.min = data[self.num].agg('min')
             self.max = data[self.num].agg('max')
             
@@ -466,10 +466,10 @@ class PreProcessing:
         if self.scaler == 'robust':
             df_scaled.loc[:,self.num] = (df_scaled[self.num]-self.median) / self.IQR
          
-        if self.scaler == 'standard':
+        elif self.scaler == 'standard':
             df_scaled.loc[:,self.num] = (df_scaled[self.num]-self.mean) / self.std
                 
-        if self.scaler == 'minmax':
+        elif self.scaler == 'minmax':
             df_scaled.loc[:,self.num] = (df_scaled[self.num]-self.min) / (self.max-self.min)
 
         return df_scaled
@@ -510,7 +510,7 @@ class PreProcessing:
             
             data.loc[:,self.num] = data[self.num].clip(lower=self.low, upper=self.up, axis=1)  
     
-        if kind == 'standard':
+        elif kind == 'standard':
             self.std = data[self.num].std()
             s = 3 * self.std
             self.low = self.mean - s
