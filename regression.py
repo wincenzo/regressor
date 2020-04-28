@@ -94,8 +94,7 @@ class Regressor:
                     
                 else:
                     self.logistic = False
-
-            
+                    
             #gradient descend
             dJ = (1/n) * ((H-y_train).T @ X_train)
             _weights = weights - (l*dJ)
@@ -247,10 +246,12 @@ class Regressor:
         else:
             RSS = (self.y_test-self.prediction).T @ (self.y_test-self.prediction)
             TSS = (self.y_test-self.y_test.mean()).T @ (self.y_test-self.y_test.mean())
-            self.R_2 = 1 - (RSS.ravel() / TSS.ravel()) 
+            
+            self.R_2 = np.round(1 - (RSS/TSS), 3) 
             
             MSE = (1/self.n) * ((self.y_test-self.prediction).T @ (self.y_test-self.prediction))
-            self.RMSE = np.sqrt(MSE.ravel())
+
+            self.RMSE = np.round(np.sqrt(MSE), 3)
             
             return np.array([self.R_2, self.RMSE])
     
