@@ -181,7 +181,7 @@ class Regressor:
         else:
             k = (self.y-H)
             k_T = np.transpose(k, axes=[0,2,1])
-            J = (1/(2*self.n)) * k_T @ k
+            J = (1/(2*self.n)) * (k_T @ k)
             
         l2 = ((1-self.beta)/2) * (self.w_list @ w_list_T)
         l1 = self.beta * np.linalg.norm(self.w_list, ord=1, axis=(1,2))[:,np.newaxis,np.newaxis]
