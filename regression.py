@@ -38,7 +38,7 @@ class Regressor:
 
     def _y(self, data):
     
-        y = data[[self.target]].to_numpy() #with double squares-brakets return a column vector
+        y = data[[self.target]].to_numpy() #with double squares-brakets returns a column vector
         
         return y
     
