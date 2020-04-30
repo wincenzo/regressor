@@ -502,16 +502,16 @@ class PreProcessing:
         
         self.outliers = kind
         
-        self.mean = data[self.num].mean()
-        
         if kind == 'robust':
+            self.median = data[self.num].median()
             self.IQR = data[self.num].quantile(.75) - data[self.num].quantile(.25)
-            self.low = self.mean - 1.5 * self.IQR
-            self.up = self.mean + 1.5 * self.IQR
+            self.low = self.median - 1.5 * self.IQR
+            self.up = self.median + 1.5 * self.IQR
             
             data.loc[:,self.num] = data[self.num].clip(lower=self.low, upper=self.up, axis=1)  
     
         elif kind == 'standard':
+            self.mean = data[self.num].mean()
             self.std = data[self.num].std()
             s = 3 * self.std
             self.low = self.mean - s
