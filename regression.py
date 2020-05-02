@@ -195,7 +195,7 @@ class Regressor:
         
         plt.plot(J, 'r')
         plt.ylabel('error', fontsize=13)
-        error = ('$LL = $' if self.logistic else '$MSE = $') + f'{round(J[-1], 2)}'
+        error = ('$LL = $' if self.logistic else '$MSE / 2 = $') + f'{round(J[-1], 2)}'
         plt.text(0.85, 0.9,
                  error, 
                  fontsize=14,
