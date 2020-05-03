@@ -444,7 +444,7 @@ class PreProcessing:
         self.scaler = kind
         
         if self.scaler == 'robust':
-            self.median = data[self.num].agg('median')
+            self.mean = data[self.num].agg('mean')
             IQR = lambda x: x.quantile(.75) - x.quantile(.25) 
             self.IQR = data[self.num].apply(IQR)
             
@@ -466,7 +466,7 @@ class PreProcessing:
         df_scaled = data.copy()
             
         if self.scaler == 'robust':
-            df_scaled.loc[:,self.num] = (df_scaled[self.num]-self.median) / self.IQR
+            df_scaled.loc[:,self.num] = (df_scaled[self.num]-self.mean) / self.IQR
          
         elif self.scaler == 'standard':
             df_scaled.loc[:,self.num] = (df_scaled[self.num]-self.mean) / self.std
@@ -504,10 +504,11 @@ class PreProcessing:
         self.outliers = kind
         
         if kind == 'robust':
-            self.median = data[self.num].median()
-            self.IQR = data[self.num].quantile(.75) - data[self.num].quantile(.25)
-            self.low = self.median - 1.5 * self.IQR
-            self.up = self.median + 1.5 * self.IQR
+            q1 = data[self.num].quantile(.25)
+            q3 = data[self.num].quantile(.75)
+            self.IQR = q3 - q1
+            self.low = q1 - 1.5 * self.IQR
+            self.up = q3 + 1.5 * self.IQR
             
             data.loc[:,self.num] = data[self.num].clip(lower=self.low, upper=self.up, axis=1)  
     
