@@ -365,7 +365,7 @@ class CrossValidation:
         
              
         
-    def metrics(self, dataset, folds = 10, threshold = None):
+    def metrics(self, dataset, folds = 10, threshold = None, seed = 3):
         
         assert 1 < folds <= len(dataset),\
         "folds must be greater than 1 and less than or equal to dataset's length"
@@ -373,9 +373,10 @@ class CrossValidation:
         Scaler = self.Scaler
         Model = self.Model
         #Model.weights = None
+        
+        dataset = pd.get_dummies(dataset, drop_first=True).sample(frac=1, random_state=seed).reset_index(drop=True)
     
         slices = range(0, len(dataset)+1, len(dataset)//folds)
-        
         df_train = (dataset.drop(index=range(slices[i], slices[i+1])) for i in range(folds))
         df_test = (dataset.iloc[slices[i]:slices[i+1]] for i in range(folds))
         
@@ -491,10 +492,10 @@ class PreProcessing:
              
         
         
-    def clip_outliers(self, 
-                      data, 
-                      kind = None, 
-                      columns = None):
+    def fit_outliers(self, 
+                     data, 
+                     kind = None, 
+                     columns = None):
         
         assert kind in ("robust", "standard"),\
         'Please choose one of these method: "robust" - "standard"'
@@ -508,9 +509,7 @@ class PreProcessing:
             q3 = data[self.num].quantile(.75)
             self.IQR = q3 - q1
             self.low = q1 - 1.5 * self.IQR
-            self.up = q3 + 1.5 * self.IQR
-            
-            data.loc[:,self.num] = data[self.num].clip(lower=self.low, upper=self.up, axis=1)  
+            self.up = q3 + 1.5 * self.IQR 
     
         elif kind == 'standard':
             self.mean = data[self.num].mean()
@@ -519,9 +518,30 @@ class PreProcessing:
             self.low = self.mean - s
             self.up = self.mean + s
             
-            data.loc[:,self.num] = data[self.num].clip(lower=self.low, upper=self.up, axis=1)
-            
+        return self
+    
+    
+    
+    
+    def clip_outliers(self, data):
+        
+        data.loc[:,self.num] = data[self.num].clip(lower=self.low, upper=self.up, axis=1)
+        
         return data
+    
+    
+    
+    
+    def fitnclip(self,
+                 data, 
+                 kind = None, 
+                 columns = None):
+        
+        df_clipped = self.fit_outliers(data, kind, columns).clip_outliers(data)
+        
+        return df_clipped
+            
+            
     
         
         
