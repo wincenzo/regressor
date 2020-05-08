@@ -374,7 +374,9 @@ class CrossValidation:
         Model = self.Model
         #Model.weights = None
         
-        dataset = pd.get_dummies(dataset, drop_first=True).sample(frac=1, random_state=seed).reset_index(drop=True)
+        dataset = pd.get_dummies(dataset, drop_first=True).\
+        sample(frac=1, random_state=seed).\
+        reset_index(drop=True)
     
         slices = range(0, len(dataset)+1, len(dataset)//folds)
         df_train = (dataset.drop(index=range(slices[i], slices[i+1])) for i in range(folds))
