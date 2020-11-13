@@ -25,6 +25,13 @@ class Regressor:
         
         
         
+        
+    @staticmethod
+    def sigmoid(H):
+        return np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H)))
+        
+        
+        
                
     def _X(self, data):
         
@@ -85,11 +92,11 @@ class Regressor:
             H = X_train @ weights.T
             
             if log is not None:
-                H = np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H))) if log else H
+                H = self.sigmoid(H) if log else H
                 
             else:
                 if df_train[self.target].nunique() == 2:
-                    H = np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H))) 
+                    H = self.sigmoid(H)
                     self.logistic = True
                     
                 else:
@@ -130,7 +137,7 @@ class Regressor:
         
         H = X_test @ self.weights.T
     
-        self.prediction = np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H))) if self.logistic else H
+        self.prediction = self.sigmoid(H) if self.logistic else H
                 
         return self
     
@@ -172,7 +179,7 @@ class Regressor:
         w_list_T = np.transpose(self.w_list, axes=[0,2,1])
             
         H = self.X @ w_list_T
-        H = np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H))) if self.logistic else H
+        H = self.sigmoid(H) if self.logistic else H
                 
         if self.logistic:
             J = (-1/self.n) * (self.y.T @ np.log(H) + (1-self.y).T @ np.log(1-H))
@@ -184,7 +191,7 @@ class Regressor:
             
         l2 = ((1-self.beta)/2) * (self.w_list @ w_list_T)
         l1 = self.beta * np.linalg.norm(self.w_list, ord=1, axis=(1,2))[:,np.newaxis,np.newaxis]
-        J = (J+(self.reg_rate/self.n)*(l1+l2)).ravel()
+        J = (J+(self.reg_rate/self.n) * (l1+l2)).ravel()
         
         w = self.w_list
         
@@ -374,9 +381,7 @@ class CrossValidation:
         Model = self.Model
         #Model.weights = None
         
-        dataset = pd.get_dummies(dataset, drop_first=True).\
-        sample(frac=1, random_state=seed).\
-        reset_index(drop=True)
+        dataset = pd.get_dummies(dataset, drop_first=True).sample(frac=1, random_state=seed).reset_index(drop=True)
     
         slices = range(0, len(dataset)+1, len(dataset)//folds)
         df_train = (dataset.drop(index=range(slices[i], slices[i+1])) for i in range(folds))
