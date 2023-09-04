@@ -1,4 +1,4 @@
-# ISTA regressor with Lasso regularization
+# ISTA regressor with ElasticNet regularization
 An implementation from scratch of Linear and Logistic Regression with elastic-net regularization, Cross Validation, Preprocessing.
 
 My article related to this implementation:
