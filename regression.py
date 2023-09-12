@@ -347,7 +347,8 @@ class CrossValidation:
             df_test = (Scaler.scale(df) for df in df_test)
             
         if Model.logistic:
-            self.threshold = Model.threshold if threshold is None else threshold
+            #self.threshold = Model.threshold if threshold is None else threshold
+            self.threshold =  threshold or Model.threshold
             
             Model._conf_matr = [Model.fitnpredict(a, b, Model.target)._metrics(self.threshold) 
                                 for a, b in zip(df_train, df_test)]
