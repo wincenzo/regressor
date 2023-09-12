@@ -49,8 +49,6 @@ def var_vs_target(dataframe,
             ax.remove()
 
 
-
-
 def hist(dataframe, 
          col = 4, 
          ref = None, 
@@ -101,8 +99,6 @@ def hist(dataframe,
             
         else:
             ax.remove()
-
-
 
 
 def corr_matrix(dataframe, **kwargs):
