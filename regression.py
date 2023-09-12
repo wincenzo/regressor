@@ -11,8 +11,7 @@ class Regressor:
                  reg_rate = 0.,
                  beta = .5,
                  epochs = 1000,
-                 logistic = None):
-        
+                 logistic = None):        
         self.l_rate = l_rate
         self.stop = stop
         self.reg_rate = reg_rate
@@ -25,15 +24,13 @@ class Regressor:
     def sigmoid(H):
         return np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H)))
                
-    def _X(self, data):
-        
+    def _X(self, data):        
         X = data.drop(self.target, axis=1).to_numpy()
         X = np.insert(X, 0, 1, axis=1)
         
         return X
         
-    def _y(self, data):
-    
+    def _y(self, data):    
         y = data[[self.target]].to_numpy() #with double squares-brakets return a column vector
         
         return y
@@ -41,8 +38,7 @@ class Regressor:
     def fit(self, 
             df_train, 
             target = None, 
-            reset = False):
-        
+            reset = False):        
         assert target is not None, 'Please choose a target column'
         
         self.target = target
@@ -113,8 +109,7 @@ class Regressor:
 
         return self
     
-    def predict(self, df_test):
-        
+    def predict(self, df_test):        
         X_test = self._X(df_test)
         self.y_test = self._y(df_test)
         
@@ -128,8 +123,7 @@ class Regressor:
                     df_train, 
                     df_test, 
                     target = None, 
-                    reset = False):
-        
+                    reset = False):        
         assert target is not None, 'Please choose a target column'
             
         self.fit(df_train, target, reset).predict(df_test)
@@ -137,8 +131,7 @@ class Regressor:
         return self
 
     @property
-    def parameters(self):
-        
+    def parameters(self):        
         features = self.features.copy()  
         features.insert(0, 'bias')
         parameters = pd.DataFrame({'features': features, 
@@ -149,8 +142,7 @@ class Regressor:
         
         return parameters
     
-    def graph(self, size = (11,11)):
-       
+    def graph(self, size = (11,11)):       
         w_list_T = np.transpose(self.w_list, axes=[0,2,1])
             
         H = self.X @ w_list_T
@@ -169,8 +161,7 @@ class Regressor:
         J = (J+(self.reg_rate/self.n) * (l1+l2)).ravel()
         
         w = self.w_list
-        
-        
+                
         plt.figure(figsize=size, tight_layout=True)
             
         ax1 = plt.subplot2grid((5, 1), (0, 0), rowspan=2)
@@ -210,8 +201,7 @@ class Regressor:
         
         plt.show()
 
-    def _metrics(self, threshold):
-        
+    def _metrics(self, threshold):       
         if self.logistic:
             classes = np.array((self.prediction >= threshold), dtype=np.int)
             self.classes = classes
@@ -235,8 +225,7 @@ class Regressor:
             
             return np.array([self.R_2, self.RMSE])
 
-    def metrics(self, threshold = None):
-        
+    def metrics(self, threshold = None):        
         if self.logistic:
             assert threshold is not None,\
             'Please assign a valid threshold value'
@@ -268,8 +257,7 @@ class Regressor:
             print(f'R^2 = {self.R_2.item()}\n\nRMSE = {self.RMSE.item()}')
        
     @property
-    def confusion_matrix(self):
-        
+    def confusion_matrix(self):       
         matrix = self._conf_matr.reshape((2, 2))
         
         plt.figure(figsize=(3,3))
@@ -287,8 +275,7 @@ class Regressor:
         plt.show()
          
     @property
-    def ROC(self):
-        
+    def ROC(self):       
         results = (self._metrics(i) for i in np.arange(0.0, 1.1, 0.01))
         TP, FP, FN, TN = zip(*results)
     
@@ -314,12 +301,9 @@ class Regressor:
         plt.title('ROC', fontsize=15)
         
         plt.show()
-             
+                    
         
-        
-        
-class CrossValidation:
-    
+class CrossValidation:    
     def __init__(self, model = None, scaler = None):
         
         from copy import copy
@@ -327,8 +311,7 @@ class CrossValidation:
         self.Model = copy(model)
         self.Scaler = copy(scaler)
    
-    def metrics(self, dataset, folds = 10, threshold = None, seed = 3):
-        
+    def metrics(self, dataset, folds = 10, threshold = None, seed = 3):        
         assert 1 < folds <= len(dataset),\
         "folds must be greater than 1 and less than or equal to dataset's length"
         
@@ -367,17 +350,14 @@ class CrossValidation:
             Model.y_test = _[:,1,0]
 
             Model.metrics(self.threshold)
-        
-                
+                        
         
 class PreProcessing:
-    
     
     def split_train_test(self, 
                          data, 
                          cutoff = 0.8, 
-                         seed = None):
-        
+                         seed = None):       
         n = len(data)
         cut = int(n*cutoff)
         
@@ -390,8 +370,7 @@ class PreProcessing:
     def fit_scaler(self, 
                    data, 
                    kind = None, 
-                   columns = None):
-        
+                   columns = None):      
         assert kind in ("robust", "standard", "minmax"),\
         'Please choose one of these method: "robust" - "standard" - "minmax"'
         
@@ -414,8 +393,7 @@ class PreProcessing:
             
         return self
         
-    def scale(self, data):
-        
+    def scale(self, data):      
         df_scaled = data.copy()
             
         if self.scaler == 'robust':
@@ -432,8 +410,7 @@ class PreProcessing:
     def fitnscale(self, 
                   data, 
                   kind = None, 
-                  columns = None):
-        
+                  columns = None):    
         df_scaled = self.fit_scaler(data, kind, columns).scale(data)
         
         return df_scaled
@@ -442,7 +419,6 @@ class PreProcessing:
                      data, 
                      kind = None, 
                      columns = None):
-        
         assert kind in ("robust", "standard"),\
         'Please choose one of these method: "robust" - "standard"'
         
@@ -467,7 +443,6 @@ class PreProcessing:
         return self
     
     def clip_outliers(self, data):
-        
         data.loc[:,self.num] = data[self.num].clip(lower=self.low, upper=self.up, axis=1)
         
         return data
@@ -476,7 +451,6 @@ class PreProcessing:
                  data, 
                  kind = None, 
                  columns = None):
-        
         df_clipped = self.fit_outliers(data, kind, columns).clip_outliers(data)
         
         return df_clipped
