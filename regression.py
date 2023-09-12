@@ -4,9 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-
-class Regressor:
-    
+class Regressor:  
     def __init__(self,
                  l_rate = .5,
                  stop = 1e-3,
@@ -22,16 +20,10 @@ class Regressor:
         self.epochs = epochs
         self.logistic = logistic
         self.weights = None
-        
-        
-        
-        
+         
     @staticmethod
     def sigmoid(H):
         return np.where(H>=0, 1/(1+np.exp(-H)), np.exp(H)/(1+np.exp(H)))
-        
-        
-        
                
     def _X(self, data):
         
@@ -40,18 +32,12 @@ class Regressor:
         
         return X
         
-                
-        
-
     def _y(self, data):
     
         y = data[[self.target]].to_numpy() #with double squares-brakets return a column vector
         
         return y
-    
-    
-    
-     
+
     def fit(self, 
             df_train, 
             target = None, 
@@ -127,9 +113,6 @@ class Regressor:
 
         return self
     
-        
- 
-    
     def predict(self, df_test):
         
         X_test = self._X(df_test)
@@ -140,9 +123,6 @@ class Regressor:
         self.prediction = self.sigmoid(H) if self.logistic else H
                 
         return self
-    
-    
-
     
     def fitnpredict(self, 
                     df_train, 
@@ -155,9 +135,7 @@ class Regressor:
         self.fit(df_train, target, reset).predict(df_test)
         
         return self
-    
-    
-     
+
     @property
     def parameters(self):
         
@@ -170,9 +148,6 @@ class Regressor:
         parameters = parameters.style.applymap(col, subset=['weights'])
         
         return parameters
-    
-        
-    
     
     def graph(self, size = (11,11)):
        
@@ -234,10 +209,7 @@ class Regressor:
         sns.despine()
         
         plt.show()
-        
-    
-    
-    
+
     def _metrics(self, threshold):
         
         if self.logistic:
@@ -262,9 +234,6 @@ class Regressor:
             self.RMSE = np.round(np.sqrt(MSE), 3)
             
             return np.array([self.R_2, self.RMSE])
-    
-    
-    
 
     def metrics(self, threshold = None):
         
@@ -297,10 +266,7 @@ class Regressor:
                 self.R_2, self.RMSE = self._metrics(threshold)
             
             print(f'R^2 = {self.R_2.item()}\n\nRMSE = {self.RMSE.item()}')
-                            
-        
-        
-         
+       
     @property
     def confusion_matrix(self):
         
@@ -319,10 +285,7 @@ class Regressor:
         plt.yticks(rotation=0)
         plt.title('Confusion Matrix', fontsize=14)
         plt.show()
-        
-                
-
-            
+         
     @property
     def ROC(self):
         
@@ -351,12 +314,7 @@ class Regressor:
         plt.title('ROC', fontsize=15)
         
         plt.show()
-        
-        
-        
-        
-
-        
+             
         
         
         
@@ -368,10 +326,7 @@ class CrossValidation:
         
         self.Model = copy(model)
         self.Scaler = copy(scaler)
-
-        
-             
-        
+   
     def metrics(self, dataset, folds = 10, threshold = None, seed = 3):
         
         assert 1 < folds <= len(dataset),\
@@ -412,12 +367,7 @@ class CrossValidation:
 
             Model.metrics(self.threshold)
         
-        
-
-        
-    
-    
-               
+                
         
 class PreProcessing:
     
@@ -435,10 +385,7 @@ class PreProcessing:
         df_train, df_test = data.iloc[0:cut], data.iloc[cut:]
         
         return df_train, df_test
-    
-    
-    
-              
+             
     def fit_scaler(self, 
                    data, 
                    kind = None, 
@@ -465,10 +412,7 @@ class PreProcessing:
             self.max = data[self.num].agg('max')
             
         return self
-    
-    
-            
-            
+        
     def scale(self, data):
         
         df_scaled = data.copy()
@@ -484,9 +428,6 @@ class PreProcessing:
 
         return df_scaled
         
-        
-    
-    
     def fitnscale(self, 
                   data, 
                   kind = None, 
@@ -496,9 +437,6 @@ class PreProcessing:
         
         return df_scaled
     
-             
-        
-        
     def fit_outliers(self, 
                      data, 
                      kind = None, 
@@ -527,17 +465,11 @@ class PreProcessing:
             
         return self
     
-    
-    
-    
     def clip_outliers(self, data):
         
         data.loc[:,self.num] = data[self.num].clip(lower=self.low, upper=self.up, axis=1)
         
         return data
-    
-    
-    
     
     def fitnclip(self,
                  data, 
